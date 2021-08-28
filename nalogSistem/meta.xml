@@ -1,0 +1,13 @@
+<meta>
+
+    <script src="c_nalog.lua" type="client" />
+    <script src="s_nalog.lua" type="server" />
+    
+    <settings>
+        <setting name="@maxPassLength" value="128" />
+        <setting name="@minPassLength" value="4" />
+
+        <setting name="@maxUserLength" value="32" />
+        <setting name="@minUserLength" value="4" />
+    </settings>
+</meta>

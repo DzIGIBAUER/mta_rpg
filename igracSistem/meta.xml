@@ -1,0 +1,16 @@
+<meta>
+
+    <script src="c_notifikacija.lua" type="client" />
+    <script src="s_igrac.lua" type="server" />
+
+    <settings>
+        <setting name="@spawnX" value="0" />
+        <setting name="@spawnY" value="0" />
+        <setting name="@spawnZ" value="3" />
+
+        <setting name="@rotX" value="0" />
+        <setting name="@rotY" value="0" />
+        <setting name="@rotZ" value="0" />
+    </settings>
+
+</meta>
