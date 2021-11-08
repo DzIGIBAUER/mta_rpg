@@ -1,7 +1,14 @@
 <meta>
 
     <script src="c_notifikacija.lua" type="client" />
+    <script src="preferences/c_binds.lua" type="client"/>
+    <script src="preferences/c_obnovi.lua" type="client"/>
+    <script src="preferences/s_obnovi.lua" type="server"/>
     <script src="s_igrac.lua" type="server" />
+
+    <!--<file src="preferences/userData.xml" type="client" download="false"/>-->
+
+    <export function="azurirajBind" type="client" />
 
     <settings>
         <setting name="@spawnX" value="0" />
@@ -12,5 +19,7 @@
         <setting name="@rotY" value="0" />
         <setting name="@rotZ" value="0" />
     </settings>
+
+     <download_priority_group>10</download_priority_group>
 
 </meta>
