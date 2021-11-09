@@ -1,0 +1,7 @@
+<meta>
+
+    <script src="bufferDeliver.lua" type="shared" />
+
+    <export function="sendFunctionBufferConstruct" type="shared" />
+
+</meta>
