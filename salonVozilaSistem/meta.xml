@@ -1,0 +1,9 @@
+<meta>
+
+    <script src="s_salonVozila.lua" type="server" />
+    <script src="s_config.lua" type="server" />
+    <script src="c_salonVozila.lua" type="client" />
+
+    <min_mta_version server="1.3.0-9.04570" />
+
+</meta>
