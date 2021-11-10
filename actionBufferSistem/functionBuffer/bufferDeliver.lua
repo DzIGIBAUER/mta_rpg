@@ -5,7 +5,6 @@
     bolje je da sacekamo neko vreme (vremeCekanja) i iz jednog otvaranja ocitamo informacije za sve resurse koji ih cekaju
 ]]
 
---
 
 local FUNC_BUFF_CLASS_PATH = "functionBufferClass.lua"
 

@@ -1,7 +1,14 @@
 <meta>
 
-    <script src="bufferDeliver.lua" type="shared" />
+    <script src="functionBuffer\bufferDeliver.lua" type="shared" />
+
+    <script src="eventBuffer\s_eventBuffer.lua" type="server" />
+    <script src="eventBuffer\c_eventBuffer.lua" type="client" />
+    <script src="eventBuffer\eventBuffer.lua" type="shared" />
 
     <export function="sendFunctionBufferConstruct" type="shared" />
+
+    <export function="posaljiEventServeru" type="client" />
+    <export function="posaljiEventClientu" type="server" />
 
 </meta>

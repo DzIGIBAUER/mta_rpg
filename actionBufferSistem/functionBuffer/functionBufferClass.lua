@@ -57,8 +57,6 @@ end
 
 
 function Buffer:_pokreniTimer()
-    -- ovde zovemo anon funkciju kako bi nil-ovali promenljivu gde je bio timer
-    -- https://wiki.multitheftauto.com/wiki/IsTimer
     self._lastTimer = setTimer(function()
         self:_runFunction()
 
