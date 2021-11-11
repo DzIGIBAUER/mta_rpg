@@ -5,15 +5,15 @@
     bolje je da sacekamo neko vreme (vremeCekanja) i iz jednog otvaranja ocitamo informacije za sve resurse koji ih cekaju
 ]]
 
-
-local FUNC_BUFF_CLASS_PATH = "functionBufferClass.lua"
+-- https://wiki.multitheftauto.com/wiki/FileExists
+local FUNC_BUFF_CLASS_PATH = "functionBuffer/functionBufferClass.lua"
 
 function sendFunctionBufferConstruct()
-    local file = fileExists(FUNC_BUFF_CLASS_PATH) and fileOpen(FUNC_BUFF_CLASS_PATH) or error("Fatalna greska. Nije pronadjen fajl ".. CLASS_PATH)
+    local file = fileExists(FUNC_BUFF_CLASS_PATH) and fileOpen(FUNC_BUFF_CLASS_PATH) or error("Fatalna greska. Nije pronadjen fajl ".. FUNC_BUFF_CLASS_PATH)
 
     local fileData = fileRead(file, fileGetSize(file))
 
     fileClose(file)
     
     return fileData
-end
+end 
