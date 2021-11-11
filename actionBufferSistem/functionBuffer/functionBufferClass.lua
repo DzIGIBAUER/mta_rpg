@@ -24,9 +24,24 @@ function Buffer:_runFunction()
     end
 
     self._lastTimer = false
-    self._handlerFunction(self._elementi)
+    local zaBrisanje = self._handlerFunction(self._elementi)
 
-    self._elementi = {}
+    if type(zaBrisanje) == "table" then
+        for ek=1, #self._elemnti do
+            for k=1, #zaBrisanje do
+                if self._elementi[ek] == zaBrisanje[k] then
+                    self._elementi[ek] = nil
+                    break
+                end
+            end
+        end
+
+    elseif zaBrisanje then
+        for k=1, #self._elementi do
+            self._elementi[k] = nil
+        end
+    end    
+    
     self._lastTimer = nil
 end
 
