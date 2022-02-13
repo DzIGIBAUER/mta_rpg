@@ -1,6 +1,7 @@
 Buffer = {}
 Buffer.__index = Buffer
 
+
 function Buffer.new(vremeCekanja, elementType, handlerFunction)
     local self = setmetatable({}, Buffer)
     
@@ -8,6 +9,10 @@ function Buffer.new(vremeCekanja, elementType, handlerFunction)
     self._vremeCekanja = vremeCekanja
     self._elementType = elementType
     self._handlerFunction = handlerFunction
+
+    -- FIXME: "Avoid designing APIs which depend on the difference between nil and false."
+    -- https://github.com/luarocks/lua-style-guide#conditional-expressions
+
 
     -- ako je _lastTimer nil nema tajmera i handlerFunkcija nije aktivna
     -- ako je false nema tajmera ali je handlerFunkcija aktivna
@@ -40,7 +45,7 @@ function Buffer:_runFunction()
         for k=1, #self._elementi do
             self._elementi[k] = nil
         end
-    end    
+    end
     
     self._lastTimer = nil
 end
@@ -52,10 +57,11 @@ function Buffer:forceRun()
     
     if self._lastTimer then
         killTimer(self._lastTimer)
-        self._lastTimer = nil
+        self._lastTimer = false
     end
 
     self:_runFunction()
+    self._lastTimer = nil
 end
 
 
@@ -79,19 +85,25 @@ function Buffer:_pokreniTimer()
 end
 
 function Buffer:_pokreniPoPotrebi()
-    if next(self._elementi) == nil then
+    if not self:isHandlerSet() then
+        return outputDebugString("Elementi su dodati ali handler nije namesten, odlaze se")
+    end
 
+    if not self._lastTimer then
         self:_pokreniTimer()
     end
 end
 
 
 
-function Buffer:appendElement(element)
+function Buffer:appendElement(element, pokreni)
     if getElementType(element) ~= self._elementType then
         return error(string.format("Greska, ocekivan element sa tipom \"%s\" a dobijen \"%s\".", self._elementType, getElementType(element) or "nepoznat"))
     end
 
-    self:_pokreniPoPotrebi()
     table.insert(self._elementi, element)
+    
+    if pokreni then
+        self:_pokreniPoPotrebi()
+    end
 end

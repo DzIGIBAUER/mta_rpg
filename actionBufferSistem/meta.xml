@@ -12,4 +12,6 @@
     <export function="posaljiEventServeru" type="client" />
     <export function="posaljiEventClientu" type="server" />
 
+    <download_priority_group>20</download_priority_group>
+
 </meta>
