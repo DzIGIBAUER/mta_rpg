@@ -1,13 +1,20 @@
+<!--
+    Ovaj resurs omogucava da se radnje koje se cesto ponavljaju u kratkom vremenskom intervalu grupisu u jednu.
+    Na primer, ako resur trazi informacije iz .xml fajl i dobijemo nekoliko takvih zahteva u roku od 50ms,
+    umesto da otvorimo-procitamo-zatvorima fajl onoliko puta koliko smo puta dobili zahtev,
+    bolje je da sacekamo neko vreme (vreme_cekanja) i iz jednog otvaranja ocitamo informacije za sve resurse koji ih cekaju.
+-->
+
 <meta>
 
-    <script src="functionBuffer\functionBufferClass.lua" type="shared" />
-    <script src="functionBuffer\bufferDeliver.lua" type="shared" />
+    <script src="functionBuffer/functionBufferClass.lua" type="shared" />
+    <script src="functionBuffer/bufferDeliver.lua" type="shared" />
 
-    <export function="sendFunctionBufferConstruct" type="shared" />
+    <export function="send_function_buffer_construct" type="shared" />
 
-    <script src="eventBuffer\s_eventBuffer.lua" type="server" />
-    <script src="eventBuffer\c_eventBuffer.lua" type="client" />
-    <script src="eventBuffer\eventBuffer.lua" type="shared" />
+    <script src="eventBuffer/s_eventBuffer.lua" type="server" />
+    <script src="eventBuffer/c_eventBuffer.lua" type="client" />
+    <script src="eventBuffer/eventBuffer.lua" type="shared" />
 
     <export function="posaljiEventServeru" type="client" />
     <export function="posaljiEventClientu" type="server" />

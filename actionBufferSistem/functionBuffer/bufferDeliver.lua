@@ -1,19 +1,15 @@
---[[
-    Ovaj resurs omogucava da se radnje koje se cesto ponavljaju u kratkom vremenskom intervalu grupisu u jednu.
-    Npr. ako resur trazi informacije iz .xml fajl i dobijemo nekoliko takvih zahteva u roku od 50ms,
-    umesto da otvorimo-procitamo-zatvorima fajl onoliko puta koliko smo puta dobili zahtev,
-    bolje je da sacekamo neko vreme (vremeCekanja) i iz jednog otvaranja ocitamo informacije za sve resurse koji ih cekaju
-]]
-
 -- https://wiki.multitheftauto.com/wiki/FileExists
 local FUNC_BUFF_CLASS_PATH = "functionBuffer/functionBufferClass.lua"
 
-function sendFunctionBufferConstruct()
+--- Salje functionBufferClass.lua kao string resursu koji pozove ovu funkciju.
+-- Resurs ce taj string da ucita sa loadstring kako bi koristii ovaj resurs sa samo jednim pozivom exportovane funkcije
+-- @return string: functionBufferClass.lua kod.
+function send_function_buffer_construct()
     local file = fileExists(FUNC_BUFF_CLASS_PATH) and fileOpen(FUNC_BUFF_CLASS_PATH) or error("Fatalna greska. Nije pronadjen fajl ".. FUNC_BUFF_CLASS_PATH)
 
-    local fileData = fileRead(file, fileGetSize(file))
+    local file_data = fileRead(file, fileGetSize(file))
 
     fileClose(file)
     
-    return fileData
+    return file_data
 end 

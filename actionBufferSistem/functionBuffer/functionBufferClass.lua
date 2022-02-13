@@ -1,109 +1,115 @@
 Buffer = {}
 Buffer.__index = Buffer
 
-
-function Buffer.new(vremeCekanja, elementType, handlerFunction)
+--- Stvara novi Buffer objekat preko kojeg mozemo da grupisemo vise radnji u jednu (vidi meta.xml).
+-- @param vreme_cekanja int: Koliko cekati pre nego sto pokrenemo 'handler_function'.
+-- @param element_type string: Tip elementa koji ce buffer cuvati. https://wiki.multitheftauto.com/wiki/Element
+-- @param handler_function function: Funkcija koja ce biti pozvana nakon 'vreme_cekanja'
+-- i kojoj ce biti prosledjeni elementi
+-- @return Buffer
+function Buffer.new(vreme_cekanja, element_type, handler_function)
     local self = setmetatable({}, Buffer)
     
     self._elementi = {}
-    self._vremeCekanja = vremeCekanja
-    self._elementType = elementType
-    self._handlerFunction = handlerFunction
+    self.vreme_cekanja = vreme_cekanja
+    self.element_type = element_type
+    self.handler_function = handler_function
 
-    -- FIXME: "Avoid designing APIs which depend on the difference between nil and false."
-    -- https://github.com/luarocks/lua-style-guide#conditional-expressions
-
-
-    -- ako je _lastTimer nil nema tajmera i handlerFunkcija nije aktivna
-    -- ako je false nema tajmera ali je handlerFunkcija aktivna
-    -- ako je Timer objekat onda je pokretanje handlerFunkcije zakazano
-    self._lastTimer = nil
+    -- self.last_timer je Timer element ili nil
+    self.last_timer = nil
+    self.handler_func_aktivna = false
 
     return self
 end
 
-
-function Buffer:_runFunction()
-    if not self:isHandlerSet() then
+--- Pokrece 'handler_function' i prosledjuje elemente, nakon cega ih brise ako su procesuirani.
+-- 'handler_function' ce vratiti 'true' ako je sve u redu, nakon cega ce elmenti biti obrisni.
+-- 'false' ako elemnti nisu procesuirani i 'table' ako treba izbrisati samo neke elmente, odredjen u toj tabeli.
+function Buffer:run_function()
+    if not self:is_handler_set() then
         return error("Handler funkcija nije podesena. " + getResourceName(resource))
     end
 
-    self._lastTimer = false
-    local zaBrisanje = self._handlerFunction(self._elementi)
+    self.last_timer = nil
 
-    if type(zaBrisanje) == "table" then
+    self.handler_func_aktivna = true
+    local za_brisanje = self.handler_function(self._elementi)
+    self.handler_func_aktivna = false
+
+    if type(za_brisanje) == "table" then
         for ek=1, #self._elemnti do
-            for k=1, #zaBrisanje do
-                if self._elementi[ek] == zaBrisanje[k] then
+            for k=1, #za_brisanje do
+                if self._elementi[ek] == za_brisanje[k] then
                     self._elementi[ek] = nil
                     break
                 end
             end
         end
 
-    elseif zaBrisanje then
+    elseif za_brisanje then
         for k=1, #self._elementi do
             self._elementi[k] = nil
         end
     end
-    
-    self._lastTimer = nil
 end
 
--- na silu pokrece funkciju iako nije proslo self._vremeCekanja
-function Buffer:forceRun()
+--- Na silu pokrece 'handler_function', ako vec nije i prekidajuci timer ako je namesten
+function Buffer:force_run()
 
-    if self._lastTimer == false then return end
+    if self.handler_func_aktivna then return end
+
     
-    if self._lastTimer then
-        killTimer(self._lastTimer)
-        self._lastTimer = false
+    if self.last_timer then
+        killTimer(self.last_timer)
+        self.last_timer = nil
     end
 
-    self:_runFunction()
-    self._lastTimer = nil
+    self:run_function()
+end
+
+
+function Buffer:set_handler(handler_function)
+    self.handler_function = handler_function
+
+end
+
+function Buffer:is_handler_set()
+    if self.handler_function then return true else return false end
 end
 
 
 
-function Buffer:setHandler(handlerFunction)
-    self._handlerFunction = handlerFunction
+function Buffer:pokreni_timer()
+    self.last_timer = setTimer(function()
+        self:run_function()
 
+    end, self.vreme_cekanja, 1)
 end
 
-function Buffer:isHandlerSet()
-    if self._handlerFunction then return true else return false end
-end
-
-
-
-function Buffer:_pokreniTimer()
-    self._lastTimer = setTimer(function()
-        self:_runFunction()
-
-    end, self._vremeCekanja, 1)
-end
-
-function Buffer:_pokreniPoPotrebi()
-    if not self:isHandlerSet() then
+--- Pokrece timer za pokretanje 'handler_function' ako timer vec nije pokrenut
+function Buffer:pokreni_po_potrebi()
+    if not self:is_handler_set() then
         return outputDebugString("Elementi su dodati ali handler nije namesten, odlaze se")
     end
 
-    if not self._lastTimer then
-        self:_pokreniTimer()
+    if not self.last_timer then
+        self:pokreni_timer()
     end
 end
 
 
-
-function Buffer:appendElement(element, pokreni)
-    if getElementType(element) ~= self._elementType then
-        return error(string.format("Greska, ocekivan element sa tipom \"%s\" a dobijen \"%s\".", self._elementType, getElementType(element) or "nepoznat"))
+--- Dodaje element u listu elemenata koji su prosledjeni 'handler_function' kada je pokrenuta.
+-- Element mora da bude odredjenog 'element_type'.
+-- @param element element: Element koju dodajemo.
+-- @param pokreni bool: Da li treba da zakazemo pokretanje 'handler_function' nakon dodavanja elementa.
+function Buffer:append_element(element, pokreni)
+    if getElement_type(element) ~= self.element_type then
+        return error(string.format('Greska, ocekivan element sa tipom "%s", a dobijen "%s"', self.element_type, getElement_type(element) or "nepoznat"))
     end
 
     table.insert(self._elementi, element)
     
     if pokreni then
-        self:_pokreniPoPotrebi()
+        self:pokreni_po_potrebi()
     end
 end

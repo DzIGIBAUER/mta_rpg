@@ -1,31 +1,35 @@
-local _vremeCekanja = 300
--- kljuc: eventName
-local _eventiData = {}
-local _timer = nil
+local vreme_cekanja = 300
+-- kljuc event_name
+local event_buffer = {}
+local timer = nil
 
 local next = next
 
-local function _pokreniSlanje()
-    triggerServerEvent("bufferedEvent", resourceRoot, _eventiData)
+--- Salje sve evente koji su se skupili za 'vreme_cekanja' i skanja ih iz 'event_buffer'
+local function pokreni_slanje()
+    triggerServerEvent("eventBuffer:eventsReceived", resourceRoot, event_buffer)
 
-    for eventName, _ in pairs(_eventiData) do
-        _eventiData[eventName] = nil
+    for event_name, _ in pairs(event_buffer) do
+        event_buffer[event_name] = nil
     end
-    _timer = nil
+    timer = nil
 end
 
+--- Dodaje event, koji je namenjen serveru, u 'event_buffer' sa svim ostalim argumentima.
+-- Event ce, zajedno sa svi ostalim dodatim u medjuvremenu, biti poslat kada prodje 'vreme_cekanja'.
+-- @param event_name string: Ime eventa koji ce biti poslat.
+-- @param ... any: Argumenti koji ce biti prosledjeni uz event.
+function posalji_server_event(event_name, ...)
+    if next(event_buffer) == nil  or (next(event_buffer) ~= nil and timer == nil) then
 
-function posaljiServerEvent(eventName, ...)
-    if next(_eventiData) == nil  or (next(_eventiData) ~= nil and _timer == nil) then
-
-        _timer = setTimer(_pokreniSlanje, _vremeCekanja, 1)
+        timer = setTimer(pokreni_slanje, vreme_cekanja, 1)
     end
 
-    if not _eventiData[eventName] then
-        _eventiData[eventName] = {}
+    if not event_buffer[event_name] then
+        event_buffer[event_name] = {}
     end
 
-    local evData = _eventiData[eventName]
+    local evData = event_buffer[event_name]
     
     evData[#evData+1] = {...}
 end
