@@ -25,7 +25,7 @@ end
 -- Event ce, zajedno sa svi ostalim dodatim u medjuvremenu, biti poslat kada prodje 'vreme_cekanja'.
 -- @param send_to element/table: Za koga je namenje event.
 -- @param event_name string: Ime eventa koji ce biti poslat.
--- @param ... any: Argumenti koji ce biti prosledjeni uz event.
+-- @param[opt] ... any: Argumenti koji ce biti prosledjeni uz event.
 function posalji_client_event(send_to, event_name, ...)
     if next(event_buffer) == nil  or (next(event_buffer) ~= nil and timer == nil) then
 

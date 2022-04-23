@@ -13,7 +13,7 @@ local function posaljiPoruku(client, event, poruka, ...)
 end
 
 local function loginPokusaj(username, lozinka)
-    local db = exports["dbSistem"].getConnection()
+    local db = exports["dbSistem"].get_connection()
     if not db then
         return posaljiPoruku(client, "onLoginNeuspesan", "Nije ostvarena veza sa bazom podataka.")
 
@@ -46,7 +46,7 @@ local function loginPokusaj(username, lozinka)
             result[1].id = nil -- imamo nalogID vec, ne treba nam 2 puta a uzeo sam sve sa '*' u sql komandi
             result[1].lozinka = nil -- vise nam ne treba
             
-            triggerEvent("onIgracUlogovan", client, result[1])
+            triggerEvent("igracSistem:igracUlogovan", client, result[1])
             
 
             dbExec(db, "UPDATE nalog SET zadnjaPrijava = CURRENT_TIMESTAMP() WHERE id = ?", result[1].id)
@@ -76,7 +76,7 @@ local function registerPokusaj(username, lozinka)
         )
     end
 
-    local db = exports["dbSistem"].getConnection()
+    local db = exports["dbSistem"].get_connection()
     if not db then
         return posaljiPoruku(client, "onRegistracijaNeuspesna", "Nije ostvarena veza sa bazom podataka.")
     end

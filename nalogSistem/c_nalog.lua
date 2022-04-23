@@ -1,22 +1,27 @@
+--[[
+
+NE DOKUMENTUJEM. MENJAMO SA CEF-OM, SVAKAKO.
+
+]]
 loadstring(exports.dgs:dgsImportFunction())()
 
 --[[ UI ]]
-local prikazanUI = "register" -- login ili register
-local switchDuration = 150 -- ms
-local loginElementi = {}
-local registerElementi = {}
+local prikazan_ui = "register" -- login ili register
+local switch_duration = 150 -- ms
+local login_elementi = {}
+local register_elementi = {}
 
 --[[ POLICY ]]
 local policy -- tabela. Od servera dobijemo minPassLength, maxPassLength, minUserLength, maxUserLength
 
 
-local function fadeChangeText(label, noviText)
-    dgsAlphaTo(label, 0, false, "Linear", switchDuration)
-    if noviText and noviText ~= "" then
+local function fade_change_text(label, novi_text)
+    dgsAlphaTo(label, 0, false, "Linear", switch_duration)
+    if novi_text and novi_text ~= "" then
         setTimer(function()
-            dgsSetText(label, noviText)
-            dgsAlphaTo(label, 1, false, "Linear", switchDuration)
-        end, switchDuration, 1)
+            dgsSetText(label, novi_text)
+            dgsAlphaTo(label, 1, false, "Linear", switch_duration)
+        end, switch_duration, 1)
     end
 end
 
@@ -24,13 +29,13 @@ local function prikaziLoginUI(prikazi)
     if prikazi == nil then prikazi = true end
 
     if prikazi then
-        prikazanUI = "login"
-        fadeChangeText(headerLabel, "Login")
+        prikazan_ui = "login"
+        fade_change_text(headerLabel, "Login")
         dgsSetText(switchBtn, "Registruj se")
-        fadeChangeText(tipLabel, "Nemate nalog? Registrujte se.")
+        fade_change_text(tipLabel, "Nemate nalog? Registrujte se.")
     end
 
-    for _, element in ipairs(loginElementi) do
+    for _, element in ipairs(login_elementi) do
         dgsSetVisible(element, prikazi)
     end
 end
@@ -39,13 +44,13 @@ local function prikaziRegisterUI(prikazi)
     if prikazi == nil then prikazi = true end
 
     if prikazi then
-        prikazanUI = "register"
-        fadeChangeText(headerLabel, "Registracija")
+        prikazan_ui = "register"
+        fade_change_text(headerLabel, "Registracija")
         dgsSetText(switchBtn, "Login")
-        fadeChangeText(tipLabel, "Već imate nalog? Prijavite se.")
+        fade_change_text(tipLabel, "Već imate nalog? Prijavite se.")
     end
 
-    for _, element in ipairs(registerElementi) do
+    for _, element in ipairs(register_elementi) do
         dgsSetVisible(element, prikazi)
     end
 end
@@ -53,7 +58,7 @@ end
 local function switchUI()
     local rState -- da li treba da prikazemo register UI, login UI ce da bude kontra
 
-    if prikazanUI == "login" then
+    if prikazan_ui == "login" then
         rState = true
 
     else
@@ -206,19 +211,19 @@ local function prikaziWelcomeScreen()
     switchBtn = dgsCreateButton(0.1, 0.70, 0.12, 0.04, "Registruj se", true, window)
     tipLabel = dgsCreateLabel(0.1, 0.74, 0.25, 0.04, "Nemate nalog? Registrujte se.", true, window)
 
-    table.insert(loginElementi, lUsr)
-    table.insert(loginElementi, lUsrLabel)
-    table.insert(loginElementi, lSfr)
-    table.insert(loginElementi, lSfrLabel)
-    table.insert(loginElementi, lBtn)
+    table.insert(login_elementi, lUsr)
+    table.insert(login_elementi, lUsrLabel)
+    table.insert(login_elementi, lSfr)
+    table.insert(login_elementi, lSfrLabel)
+    table.insert(login_elementi, lBtn)
 
-    table.insert(registerElementi, rUsr)
-    table.insert(registerElementi, rUsrLabel)
-    table.insert(registerElementi, rSfr)
-    table.insert(registerElementi, rSfrLabel)
-    table.insert(registerElementi, rSfrc)
-    table.insert(registerElementi, rSfrcLabel)
-    table.insert(registerElementi, rBtn)
+    table.insert(register_elementi, rUsr)
+    table.insert(register_elementi, rUsrLabel)
+    table.insert(register_elementi, rSfr)
+    table.insert(register_elementi, rSfrLabel)
+    table.insert(register_elementi, rSfrc)
+    table.insert(register_elementi, rSfrcLabel)
+    table.insert(register_elementi, rBtn)
 
     switchUI()
 

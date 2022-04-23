@@ -4,7 +4,7 @@ Buffer.__index = Buffer
 --- Stvara novi Buffer objekat preko kojeg mozemo da grupisemo vise radnji u jednu (vidi meta.xml).
 -- @param vreme_cekanja int: Koliko cekati pre nego sto pokrenemo 'handler_function'.
 -- @param element_type string: Tip elementa koji ce buffer cuvati. https://wiki.multitheftauto.com/wiki/Element
--- @param handler_function function: Funkcija koja ce biti pozvana nakon 'vreme_cekanja'
+-- @param[opt] handler_function function: Funkcija koja ce biti pozvana nakon 'vreme_cekanja'
 -- i kojoj ce biti prosledjeni elementi
 -- @return Buffer
 function Buffer.new(vreme_cekanja, element_type, handler_function)
@@ -101,10 +101,10 @@ end
 --- Dodaje element u listu elemenata koji su prosledjeni 'handler_function' kada je pokrenuta.
 -- Element mora da bude odredjenog 'element_type'.
 -- @param element element: Element koju dodajemo.
--- @param pokreni bool: Da li treba da zakazemo pokretanje 'handler_function' nakon dodavanja elementa.
+-- @param[opt] pokreni bool: Da li treba da zakazemo pokretanje 'handler_function' nakon dodavanja elementa.
 function Buffer:append_element(element, pokreni)
-    if getElement_type(element) ~= self.element_type then
-        return error(string.format('Greska, ocekivan element sa tipom "%s", a dobijen "%s"', self.element_type, getElement_type(element) or "nepoznat"))
+    if getElementType(element) ~= self.element_type then
+        return error(string.format('Greska, ocekivan element sa tipom "%s", a dobijen "%s"', self.element_type, getElementType(element) or "nepoznat"))
     end
 
     table.insert(self._elementi, element)

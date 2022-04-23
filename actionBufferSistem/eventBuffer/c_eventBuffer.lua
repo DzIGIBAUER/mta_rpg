@@ -18,7 +18,7 @@ end
 --- Dodaje event, koji je namenjen serveru, u 'event_buffer' sa svim ostalim argumentima.
 -- Event ce, zajedno sa svi ostalim dodatim u medjuvremenu, biti poslat kada prodje 'vreme_cekanja'.
 -- @param event_name string: Ime eventa koji ce biti poslat.
--- @param ... any: Argumenti koji ce biti prosledjeni uz event.
+-- @param[opt] ... any: Argumenti koji ce biti prosledjeni uz event.
 function posalji_server_event(event_name, ...)
     if next(event_buffer) == nil  or (next(event_buffer) ~= nil and timer == nil) then
 

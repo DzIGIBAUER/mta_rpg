@@ -3,75 +3,90 @@
     zatrazicemo od servera kopiju fajla
 ]]
 
--- TODO: obnovi samo <binds> node a ne ceo fajl
 
-standardnePostavke = nil -- xml string sa standardnim postavkama
-local cMngr = Comparator.new()
-local _callBack = nil-- funkcija koju treba da pozovema kada obnovimo user preferences
-local _args = nil -- argumenti koje treba proslediti callback-u
+standardne_postavke = nil -- xml string sa standardnim postavkama
+local comparator_mngr = Comparator.new()
 
+local callback = nil-- funkcija koju treba da pozovema kada obnovimo user preferences
+local callback_args = nil -- argumenti koje treba proslediti callback-u
 
-function obnoviUserPreferences(args)
-    _callback = args.callback
-    _args = args.callbackArguments
+local x_paths = {
+    ["binds"] = {binds=0}
+}
 
-    if not standardnePostavke then
-        triggerServerEvent("userBinds:clientTraziStandardnePostavke", resourceRoot, args.xPath)
+--- Osvezice postavke igraca. Pogledaj XmlComparator (comparator_mngr) za vise informacija.
+-- @param args table: Tabela sa mogucim poljima: callback, callback_arguments i target_node.
+--  target_node string: Od kog node-a treba krenuti osvezavanje prema 'x_paths' tabeli sa vrha, 'nil' za osvezavanje celog fajla.
+--  callback[opt] function: Funkcija koju treba da pozovemo nakon sto osvezimo postavke igraca.
+--  callback_arguments[opt] table: Sta proslediti toj funkciji.
+function obnovi_user_preferences(args)
+    callback = args.callback
+    callback_args = args.callback_arguments
+
+    if not standardne_postavke then
+        triggerServerEvent("userBinds:clientTraziStandardnePostavke", resourceRoot, args.target_node)
     else
-        _osveziPostavke(standardnePostavke, args.xPath)
+        osvezi_postavke(standardne_postavke, args.target_node)
     end
 end
 
-local function _osveziPostavke(fileData, xPath)
-    standardnePostavke = fileData
+--- Osvezava postavke korisnika u XML fajlu pomocu XmlComparator-a, koristeci standardni XML fajl sa servera,
+-- koji se client-u salje jednom i cuva u memoriji kao string.
+-- Ako korisnik nema XML fajl on se pravi, i osvezavanje je moguce zapoveti od 'target_node'-a iz 'x_paths' tabele.
+-- Ako do node-a koji se nalazi na 'x_path' ne mozemo doci bice obnovljeno sve do njega pa zatim i on.
+-- @param file_data string: XML fajl sa servera kao string.
+-- @param[opt] target_node string: kljuc kojim uzimamo 'x_path' iz 'x_paths' tabele
+local function osvezi_postavke(file_data, target_node)
+    standardne_postavke = file_data
+    x_path = x_paths[target_node]
 
-    local userXMLRoot = xmlLoadFile(FILE_PATH)
-    local userXML = userXMLRoot
-    if userXMLRoot then
-        local serverXML = xmlLoadString(fileData)
+    local user_xml_root = xmlLoadFile(FILE_PATH)
+    local user_target_node = user_xml_root
 
-        if xPath then
-            for nName, index in pairs(xPath) do
-                -- da li ga user ima
-                nasao = xmlFindChild(userXML, nName, index)
+    if user_xml_root then
+        local server_user_target_node = xmlLoadString(file_data)
+
+        if x_path then
+            for node_name, index in pairs(x_path) do
+                nasao = xmlFindChild(user_target_node, node_name, index)
                 if not nasao then
                     break
                 end
                 
-                userXML = nasao
-                serverXML = xmlFindChild(serverXML, nName, index)
+                user_target_node = nasao
+                server_user_target_node = xmlFindChild(server_user_target_node, node_name, index)
             end
         end
 
-        cMngr:compareAndFix(userXML, serverXML, true, true)
+        comparator_mngr:compare_and_fix(user_target_node, server_user_target_node, true, true)
 
-        xmlUnloadFile(userXML)
+        xmlUnloadFile(user_target_node)
 
-        xmlUnloadFile(serverXML)
+        xmlUnloadFile(server_user_target_node)
     else
         if fileExists(FILE_PATH) then fileDelete(FILE_PATH) end
 
         local file = fileCreate(FILE_PATH)
-        fileWrite(file, fileData)
+        fileWrite(file, file_data)
         fileClose(file)
     end
 
 
     triggerEvent(
-        "notifikacija",
+        "igracSistem:notifikacija",
         localPlayer,
         "uspesno",
         "Osvežene postavke",
         "Fajl sa vašim postavkama je uspesno osvežen"
     )
 
-    if _callback then
-        _callback(unpack{_args})
+    if callback then
+        callback(unpack{args})
 
-        _callback = nil
-        _args = nil
+        callback = nil
+        args = nil
     end
 
 end
 addEvent("userBinds:serverPosaloStandardnePostavke", true)
-addEventHandler("userBinds:serverPosaloStandardnePostavke", resourceRoot, _osveziPostavke)
+addEventHandler("userBinds:serverPosaloStandardnePostavke", resourceRoot, osvezi_postavke)

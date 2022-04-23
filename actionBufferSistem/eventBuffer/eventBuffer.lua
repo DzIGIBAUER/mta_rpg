@@ -2,7 +2,7 @@
 
 --- Dobija gomilu evenata koje razlaze i trigger-uje lokalno.
 -- @param events_data table: tabela sa podacima o primljenim eventima(kljuc event_name, vrednost event_argumenti).
-local function razlozi_evente(events_data)
+local function _razlozi_evente(events_data)
     for event_name, event_data in pairs(events_data) do
 
         for k=1, #event_data do
@@ -12,4 +12,4 @@ local function razlozi_evente(events_data)
     end
 end
 addEvent("eventBuffer:eventsReceived", true)
-addEventHandler("eventBuffer:eventsReceived", resourceRoot, razlozi_evente)
+addEventHandler("eventBuffer:eventsReceived", resourceRoot, _razlozi_evente)

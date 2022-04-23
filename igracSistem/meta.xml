@@ -1,6 +1,6 @@
 <meta>
 
-    <script src="preferences/XMLComparator.lua" type="client" />
+    <script src="preferences/XmlComparator.lua" type="client" />
     <script src="c_notifikacija.lua" type="client" />
     
     <script src="preferences/userBinds/c_binds.lua" type="client"/>
@@ -9,7 +9,7 @@
 
     <script src="s_igrac.lua" type="server" />
 
-    <export function="azurirajBind" type="client" />
+    <export function="azuriraj_bind" type="client" />
 
     <settings>
         <setting name="@spawnX" value="0" />
