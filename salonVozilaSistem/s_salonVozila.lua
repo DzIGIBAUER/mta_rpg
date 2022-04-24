@@ -79,7 +79,7 @@ local function _voziloKupovina(salonIdx, voziloModelID)
             client,
             "obavestenje",
             "Nemate dovoljno novca",
-            string.format("Nemate dovoljno novca da kupite željeno vozilo. Fali vam %s$.", vinfo.cena - getPlayerMoney())
+            string.format("Nemate dovoljno novca da kupite željeno vozilo. Fali vam %s$.", vinfo.cena - getPlayerMoney(client))
         )
     end
 
