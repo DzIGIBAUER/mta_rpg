@@ -1,6 +1,33 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxwindow","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxwindow",{
+	alignment = 			{	{ PArg.String,PArg.String }	},
+	borderSize = 			{	PArg.Number	},
+	clip = 					{	PArg.Bool	},
+	color = 				{	PArg.Color	},
+	colorCoded = 			{	PArg.Bool	},
+	font = 					{	PArg.Font+PArg.String	},
+	ignoreTitle = 			{	PArg.Bool	},
+	image = 				{	PArg.Material+PArg.Nil	},
+	maxSize = 				{	{ PArg.Number,PArg.Number }	},
+	minSize = 				{	{ PArg.Number,PArg.Number }	},
+	movable = 				{	PArg.Bool	},
+	closeButtonEnabled = 	{	PArg.Bool	},
+	sizable = 				{	PArg.Bool	},
+	shadow = 				{	{ PArg.Number, PArg.Number, PArg.Color, PArg.Bool+PArg.Nil }, PArg.Nil	},
+	text = 					{	PArg.Text	},
+	textOffset =			{	{ PArg.Number, PArg.Number, PArg.Bool+PArg.Nil }, PArg.Nil },
+	textColor = 			{	PArg.Color	},
+	textSize = 				{	{ PArg.Number,PArg.Number }	},
+	titleColor = 			{	PArg.Color	},
+	titleColorBlur = 		{	PArg.Color	},
+	titleHeight = 			{	PArg.Number	},
+	titleImage = 			{	PArg.Material+PArg.Nil	},
+	wordBreak = 			{	PArg.Bool	},
+})
 --Dx Functions
-local dxDrawImage = dxDrawImageExt
-local dxDrawText = dxDrawText
+local dxDrawImage = dxDrawImage
+local dgsDrawText = dgsDrawText
 local dxDrawRectangle = dxDrawRectangle
 --
 local triggerEvent = triggerEvent
@@ -19,6 +46,7 @@ local type = type
 local applyColorAlpha = applyColorAlpha
 
 function dgsCreateWindow(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,text,relative,textColor,titleHeight,titleImage,titleColor,image,color,borderSize,noCloseButton
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -45,9 +73,8 @@ function dgsCreateWindow(...)
 	if not(type(h) == "number") then error(dgsGenAsrt(h,"dgsCreateWindow",4,"number")) end
 	local window = createElement("dgs-dxwindow")
 	dgsSetType(window,"dgs-dxwindow")
-	dgsSetParent(window,nil,true,true)
 	
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
@@ -64,21 +91,22 @@ function dgsCreateWindow(...)
 		image = image or dgsCreateTextureFromStyle(using,res,style.image),
 		color = tonumber(color) or style.color,
 		textSize = style.textSize,
+		textOffset = nil,	--nil if don't set
 		titleHeight = tonumber(titleHeight) or style.titleHeight,
 		borderSize = tonumber(borderSize) or style.borderSize,
 		ignoreTitle = false,
-		colorcoded = false,
+		colorCoded = false,
 		movable = true,
 		sizable = true,
 		clip = true,
-		wordbreak = false,
+		wordBreak = false,
 		alignment = {"center","center"},
-		moveType = false; --false only title;true are all
 		font = style.font or systemFont,
 		minSize = {60,60},
 		maxSize = {20000,20000},
 	}
-	dgsAttachToTranslation(window,resourceTranslation[sourceResource or resource])
+	dgsSetParent(window,nil,true,true)
+	dgsAttachToTranslation(window,resourceTranslation[sRes])
 	if type(text) == "table" then
 		dgsElementData[window]._translationText = text
 		dgsSetData(window,"text",text)
@@ -86,7 +114,7 @@ function dgsCreateWindow(...)
 		dgsSetData(window,"text",tostring(text or ""))
 	end
 	calculateGuiPositionSize(window,x,y,relative,w,h,relative,true)
-	triggerEvent("onDgsCreate",window,sourceResource)
+	
 	local createCloseButton = true
 	if noCloseButton == nil then
 		createCloseButton = style.closeButton
@@ -94,8 +122,27 @@ function dgsCreateWindow(...)
 		createCloseButton = false
 	end
 	if createCloseButton then
-		local closeBtn = dgsCreateButton(0,0,40,24,style.closeButtonText,false,window,_,_,_,_,_,_,style.closeButtonColor[1],style.closeButtonColor[2],style.closeButtonColor[3],true)
+		local closeIconTexture = nil
+
+		if style.closeIconImage and type(style.closeIconImage) == "table" then
+			closeIconTexture = dgsCreateTextureFromStyle(using,res,style.closeIconImage)
+		end
+		
+		local closeBtn = dgsCreateButton(0,0,40,24,"",false,window,_,_,_,_,_,_,style.closeButtonColor[1],style.closeButtonColor[2],style.closeButtonColor[3],true)
 		dgsAddEventHandler("onDgsMouseClickUp",closeBtn,"closeWindowWhenCloseButtonClicked",false)
+
+		if closeIconTexture then
+			local closeIconImg = dgsCreateImage(0,0,16,16,closeIconTexture,false,closeBtn)
+			dgsSetEnabled(closeIconImg, false)
+			dgsSetPositionAlignment(closeIconImg,"center","center")
+			dgsElementData[window].closeIconImageSize = {16,16}
+			dgsElementData[window].closeIconImage = closeIconImg
+			dgsElementData[window].closeIconTexture = closeIconTexture
+		else
+			dgsElementData[window].closeButtonText = style.closeButtonText
+			dgsSetText(closeBtn, style.closeButtonText)
+		end
+
 		dgsElementData[window].closeButtonSize = {40,24,false}
 		dgsElementData[window].closeButton = closeBtn
 		dgsSetPositionAlignment(closeBtn,"right")
@@ -103,6 +150,8 @@ function dgsCreateWindow(...)
 		dgsElementData[closeBtn].alignment = {"center","center"}
 		dgsElementData[closeBtn].ignoreParentTitle = true
 	end
+	dgsElementData[window].closeButtonEnabled = createCloseButton
+	triggerEvent("onDgsCreate",window,sRes)
 	return window
 end
 
@@ -116,11 +165,22 @@ end
 function dgsWindowSetCloseButtonEnabled(window,bool)
 	if not(dgsGetType(window) == "dgs-dxwindow") then error(dgsGenAsrt(window,"dgsWindowSetCloseButtonEnabled",1,"dgs-dxwindow")) end
 	local closeButton = dgsElementData[window].closeButton
+	local closeButtonEnabled = dgsElementData[window].closeButtonEnabled
 	if bool then
 		if not isElement(closeButton) then
 			local cbSize = dgsElementData[window].closeButtonSize
-			local closeBtn = dgsCreateButton(0,0,cbSize[1],cbSize[2],"×",cbSize[3],window,_,_,_,_,_,_,tocolor(200,50,50,255),tocolor(250,20,20,255),tocolor(150,50,50,255),true)
+			local closeBtn = dgsCreateButton(0,0,cbSize[1],cbSize[2],"",cbSize[3],window,_,_,_,_,_,_,tocolor(200,50,50,255),tocolor(250,20,20,255),tocolor(150,50,50,255),true)
 			dgsAddEventHandler("onDgsMouseClickUp",closeBtn,"closeWindowWhenCloseButtonClicked",false)
+			
+			if isElement(dgsElementData[window].closeIconTexture) then
+				local closeIconImageSize = dgsElementData[window].closeIconImageSize
+				local closeIconImg = dgsCreateImage(0,0,closeIconImageSize[1],closeIconImageSize[2],dgsElementData[window].closeIconTexture,false,closeBtn)
+				dgsSetEnabled(closeIconImg, false)
+				dgsSetPositionAlignment(closeIconImg,"center","center")
+			else
+				dgsSetText(closeBtn, dgsElementData[window].closeButtonText)
+			end
+
 			dgsSetData(window,"closeButton",closeBtn)
 			dgsSetData(closeBtn,"alignment",{"center","center"})
 			dgsSetData(closeBtn,"ignoreParentTitle",true)
@@ -129,11 +189,19 @@ function dgsWindowSetCloseButtonEnabled(window,bool)
 		end
 	else
 		if isElement(closeButton) then
+			local closeIconImage = dgsElementData[window].closeIconImage
+
+			if isElement(closeIconImage) then
+				destroyElement(closeIconImage)
+				dgsSetData(window,"closeIconImage",nil)
+			end
+
 			destroyElement(closeButton)
 			dgsSetData(window,"closeButton",nil)
 			return true
 		end
 	end
+	dgsElementData[window].closeButtonEnabled = bool
 	return false
 end
 
@@ -228,6 +296,14 @@ function dgsWindowGetVerticalAlign(window)
 end
 
 ----------------------------------------------------------------
+-----------------------PropertyListener-------------------------
+----------------------------------------------------------------
+dgsOnPropertyChange["dgs-dxwindow"] = {
+	closeButtonEnabled = function(dgsEle,key,value,oldValue)
+		dgsWindowSetCloseButtonEnabled(dgsEle,value)
+	end,
+}
+----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
 dgsRenderer["dgs-dxwindow"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherited,enabledSelf,eleData,parentAlpha,isPostGUI,rndtgt)
@@ -235,16 +311,8 @@ dgsRenderer["dgs-dxwindow"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 	local color = applyColorAlpha(eleData.color,parentAlpha)
 	local titimg,titleColor,titsize = eleData.titleImage,eleData.isFocused and eleData.titleColor or (eleData.titleColorBlur or eleData.titleColor),eleData.titleHeight
 	titleColor = applyColorAlpha(titleColor,parentAlpha)
-	if img then
-		dxDrawImage(x,y+titsize,w,h-titsize,img,0,0,0,color,isPostGUI,rndtgt)
-	else
-		dxDrawRectangle(x,y+titsize,w,h-titsize,color,isPostGUI)
-	end
-	if titimg then
-		dxDrawImage(x,y,w,titsize,titimg,0,0,0,titleColor,isPostGUI,rndtgt)
-	else
-		dxDrawRectangle(x,y,w,titsize,titleColor,isPostGUI)
-	end
+	dxDrawImage(x,y+titsize,w,h-titsize,img,0,0,0,color,isPostGUI,rndtgt)
+	dxDrawImage(x,y,w,titsize,titimg,0,0,0,titleColor,isPostGUI,rndtgt)
 	local alignment = eleData.alignment
 
 	local style = styleManager.styles[eleData.resource or "global"]
@@ -254,23 +322,19 @@ dgsRenderer["dgs-dxwindow"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 	local font = eleData.font or systemFont
 	local textColor = applyColorAlpha(eleData.textColor,parentAlpha)
 	local txtSizX,txtSizY = eleData.textSize[1],eleData.textSize[2] or eleData.textSize[1]
-	local clip,wordbreak,colorcoded = eleData.clip,eleData.wordbreak,eleData.colorcoded
+	local textOffset = eleData.textOffset
+	if textOffset then
+		x = x+(textOffset[3] and textOffset[1]*w or textOffset[1])
+		y = y+(textOffset[3] and textOffset[2]*h or textOffset[2])
+	end
+	local clip,wordBreak,colorCoded = eleData.clip,eleData.wordBreak,eleData.colorCoded
 	local text = eleData.text
 	local shadow = eleData.shadow
+	local shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont
 	if shadow then
-		local shadowoffx,shadowoffy,shadowc,shadowIsOutline = shadow[1],shadow[2],shadow[3],shadow[4]
-		local textX,textY = x,y
-		if shadowoffx and shadowoffy and shadowc then
-			local shadowText = colorcoded and text:gsub('#%x%x%x%x%x%x','') or text
-			local shadowc = applyColorAlpha(shadowc,parentAlpha)
-			dxDrawText(shadowText,textX+shadowoffx,textY+shadowoffy,textX+w+shadowoffx,textY+titsize+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-			if shadowIsOutline then
-				dxDrawText(shadowText,textX-shadowoffx,textY+shadowoffy,textX+w-shadowoffx,textY+titsize+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-				dxDrawText(shadowText,textX-shadowoffx,textY-shadowoffy,textX+w-shadowoffx,textY+titsize-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-				dxDrawText(shadowText,textX+shadowoffx,textY-shadowoffy,textX+w+shadowoffx,textY+titsize-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-			end
-		end
+		shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont = shadow[1],shadow[2],shadow[3],shadow[4],shadow[5]
+		shadowColor = applyColorAlpha(shadowColor or white,parentAlpha)
 	end
-	dxDrawText(text,x,y,x+w,y+titsize,textColor,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI,eleData.colorcoded)
+	dgsDrawText(text,x,y,x+w,y+titsize,textColor,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordBreak,isPostGUI,colorCoded,subPixelPos,0,0,0,0,shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont)
 	return rndtgt,false,mx,my,0,0
 end

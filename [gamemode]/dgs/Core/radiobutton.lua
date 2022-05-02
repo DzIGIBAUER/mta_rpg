@@ -1,7 +1,26 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxradiobutton","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxradiobutton",{
+	alignment = 		{	{ PArg.String, PArg.String }	},
+	buttonSize = 		{	{ PArg.Number, PArg.Number+PArg.Nil, PArg.Bool }	},
+	clip = 				{	PArg.Bool	},  
+	colorChecked = 		{	{ PArg.Color, PArg.Color, PArg.Color }	},
+	colorCoded = 		{	PArg.Bool	},
+	colorUnchecked = 	{	{ PArg.Color, PArg.Color, PArg.Color }	},
+	font = 				{	PArg.Font+PArg.String	},
+	imageChecked = 		{	{ PArg.Nil+PArg.Material, PArg.Nil+PArg.Material, PArg.Nil+PArg.Material }	},
+	imageUnchecked = 	{	{ PArg.Nil+PArg.Material, PArg.Nil+PArg.Material, PArg.Nil+PArg.Material }	},
+	shadow = 			{	{ PArg.Number, PArg.Number, PArg.Color, PArg.Number+PArg.Bool+PArg.Nil, PArg.Font+PArg.Nil }, PArg.Nil	},
+	text = 				{	PArg.Text	}, 
+	textColor = 		{	PArg.Color	},
+	textPadding = 		{	{ PArg.Number, PArg.Bool }	},
+	textOffset = 		{	PArg.Nil, { PArg.Number, PArg.Number, PArg.Bool }, {	{ PArg.Number, PArg.Number, PArg.Bool }, { PArg.Number, PArg.Number, PArg.Bool }, { PArg.Number, PArg.Number, PArg.Bool }	}	},
+	textSize = 			{	{ PArg.Number,PArg.Number }	},
+	wordBreak = 		{	PArg.Bool	},
+})
 --Dx Functions
-local dxDrawImage = dxDrawImageExt
-local dxDrawText = dxDrawText
-local dxDrawRectangle = dxDrawRectangle
+local dxDrawImage = dxDrawImage
+local dgsDrawText = dgsDrawText
 --DGS Functions
 local dgsSetType = dgsSetType
 local dgsGetType = dgsGetType
@@ -23,6 +42,7 @@ local tostring = tostring
 local tonumber = tonumber
 
 function dgsCreateRadioButton(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,text,relative,parent,textColor,scaleX,scaleY,nImageF,hImageF,cImageF,nColorF,hColorF,cColorF,nImageT,hImageT,cImageT,nColorT,hColorT,cColorT
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -58,38 +78,37 @@ function dgsCreateRadioButton(...)
 	if not(type(h) == "number") then error(dgsGenAsrt(h,"dgsCreateRadioButton",4,"number")) end
 	local rb = createElement("dgs-dxradiobutton")
 	dgsSetType(rb,"dgs-dxradiobutton")
-	dgsSetParent(rb,parent,true,true)
 			
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
 	local systemFont = style.systemFontElement
 	
 	style = style.radiobutton
-	local imageUnchecked = style.image_f
+	local imageUnchecked = style.imageUnchecked
 	nImageF = nImageF or dgsCreateTextureFromStyle(using,res,imageUnchecked[1])
 	hImageF = hImageF or dgsCreateTextureFromStyle(using,res,imageUnchecked[2])
 	cImageF = cImageF or dgsCreateTextureFromStyle(using,res,imageUnchecked[3])
-	local colorUnchecked = style.color_f
+	local colorUnchecked = style.colorUnchecked
 	nColorF = nColorF or colorUnchecked[1]
 	hColorF = hColorF or colorUnchecked[2]
 	cColorF = cColorF or colorUnchecked[3]
-	local imageChecked = style.image_t
+	local imageChecked = style.imageChecked
 	nImageT = nImageT or dgsCreateTextureFromStyle(using,res,imageChecked[1])
 	hImageT = hImageT or dgsCreateTextureFromStyle(using,res,imageChecked[2])
 	cImageT = cImageT or dgsCreateTextureFromStyle(using,res,imageChecked[3])
-	local colorChecked = style.color_t
+	local colorChecked = style.colorChecked
 	nColorT = nColorT or colorChecked[1]
 	hColorT = hColorT or colorChecked[2]
 	cColorT = cColorT or colorChecked[3]
-	local textSizeX,textSizeY = tonumber(scalex) or style.textSize[1], tonumber(scaley) or style.textSize[2]
+	local textSizeX,textSizeY = tonumber(scaleX) or style.textSize[1], tonumber(scaleY) or style.textSize[2]
 	dgsElementData[rb] = {
 		renderBuffer = {},
-		image_f = {nImageF,hImageF,cImageF},
-		color_f = {nColorF,hColorF,cColorF},
-		image_t = {nImageT,hImageT,cImageT},
-		color_t = {nColorT,hColorT,cColorT},
+		imageUnchecked = {nImageF,hImageF,cImageF},
+		colorUnchecked = {nColorF,hColorF,cColorF},
+		imageChecked = {nImageT,hImageT,cImageT},
+		colorChecked = {nColorT,hColorT,cColorT},
 		rbParent = dgsIsType(parent) and parent or resourceRoot,
 		text = tostring(text or ""),
 		textColor = textColor or style.textColor,
@@ -98,18 +117,20 @@ function dgsCreateRadioButton(...)
 		buttonSize = style.buttonSize,
 		shadow = {},
 		font = style.font or systemFont,
-		clip = false,
-		wordbreak = false,
-		colorcoded = false,
-		alignment = {left,"center"},
+		textOffset = nil,
+		clip = nil,
+		wordBreak = nil,
+		colorCoded = nil,
+		alignment = {"left","center"},
 	}
-	dgsAttachToTranslation(rb,resourceTranslation[sourceResource or resource])
+	dgsSetParent(rb,parent,true,true)
+	dgsAttachToTranslation(rb,resourceTranslation[sRes])
 	if type(text) == "table" then
 		dgsElementData[rb]._translationText = text
-		dgsElementData[rb].text = dgsTranslate(rb,text,sourceResource)
+		dgsElementData[rb].text = dgsTranslate(rb,text,sRes)
 	end
 	calculateGuiPositionSize(rb,x,y,relative or false,w,h,relative or false,true)
-	triggerEvent("onDgsCreate",rb,sourceResource)
+	triggerEvent("onDgsCreate",rb,sRes)
 	return rb
 end
 
@@ -170,8 +191,8 @@ end
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
 dgsRenderer["dgs-dxradiobutton"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherited,enabledSelf,eleData,parentAlpha,isPostGUI,rndtgt)
-	local image_f,image_t = eleData.image_f,eleData.image_t
-	local color_f,color_t = eleData.color_f,eleData.color_t
+	local imageUnchecked,imageChecked = eleData.imageUnchecked,eleData.imageChecked
+	local colorUnchecked,colorChecked = eleData.colorUnchecked,eleData.colorChecked
 	local rbParent = eleData.rbParent
 	local image,color
 	local _buttonSize = eleData.buttonSize
@@ -184,9 +205,9 @@ dgsRenderer["dgs-dxradiobutton"] = function(source,x,y,w,h,mx,my,cx,cy,enabledIn
 		buttonSizeY = buttonSizeX
 	end
 	if dgsElementData[rbParent].RadioButton == source then
-		image,color = image_t,color_t
+		image,color = imageChecked,colorChecked
 	else
-		image,color = image_f,color_f
+		image,color = imageUnchecked,colorUnchecked
 	end
 	local colorimgid = 1
 	if MouseData.entered == source then
@@ -219,44 +240,42 @@ dgsRenderer["dgs-dxradiobutton"] = function(source,x,y,w,h,mx,my,cx,cy,enabledIn
 	else
 		finalcolor = applyColorAlpha(color[colorimgid],parentAlpha)
 	end
-	if image[colorimgid] then
-		dxDrawImage(x,y+h*0.5-buttonSizeY*0.5,buttonSizeX,buttonSizeY,image[colorimgid],0,0,0,finalcolor,isPostGUI,rndtgt)
-	else
-		dxDrawRectangle(x,y+h*0.5-buttonSizeY*0.5,buttonSizeX,buttonSizeY,finalcolor,isPostGUI)
-	end
-	
+	dxDrawImage(x,y+h*0.5-buttonSizeY*0.5,buttonSizeX,buttonSizeY,image[colorimgid],0,0,0,finalcolor,isPostGUI,rndtgt)
+
 	local res = eleData.resource or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
 	local systemFont = style.systemFontElement
-			
+
 	local font = eleData.font or systemFont
 	local txtSizX,txtSizY = eleData.textSize[1],eleData.textSize[2] or eleData.textSize[1]
 	local clip = eleData.clip
-	local wordbreak = eleData.wordbreak
+	local wordBreak = eleData.wordBreak
 	local _textPadding = eleData.textPadding
 	local text = eleData.text
 	local textPadding = _textPadding[2] and _textPadding[1]*w or _textPadding[1]
-	local colorcoded = eleData.colorcoded
+	local colorCoded = eleData.colorCoded
 	local alignment = eleData.alignment
 	local px = x+buttonSizeX+textPadding
 	if eleData.PixelInt then px = px-px%1 end
+	local shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont
 	local shadow = eleData.shadow
 	if shadow then
-		local shadowoffx,shadowoffy,shadowc,shadowIsOutline = shadow[1],shadow[2],shadow[3],shadow[4]
-		local textX,textY = px,y
-		if shadowoffx and shadowoffy and shadowc then
-			shadowc = applyColorAlpha(shadowc,parentAlpha)
-			local shadowText = colorcoded and text:gsub('#%x%x%x%x%x%x','') or text
-			dxDrawText(shadowText,textX+shadowoffx,textY+shadowoffy,textX+w+shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-			if shadowIsOutline then
-				dxDrawText(shadowText,textX-shadowoffx,textY+shadowoffy,textX+w-shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-				dxDrawText(shadowText,textX-shadowoffx,textY-shadowoffy,textX+w-shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-				dxDrawText(shadowText,textX+shadowoffx,textY-shadowoffy,textX+w+shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
-			end
+		shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont = shadow[1],shadow[2],shadow[3],shadow[4],shadow[5]
+		shadowColor = applyColorAlpha(shadowColor or white,parentAlpha)
+	end
+	
+	local textOffset = eleData.textOffset
+	local offsetX,offsetY = 0,0
+	if textOffset then
+		local item = textOffset[colorimgid]
+		if type(item) == "table" then
+			offsetX,offsetY = item[3] and item[1]*w or item[1],item[3] and item[2]*h or item[2]
+		else
+			offsetX,offsetY = textOffset[3] and textOffset[1]*w or textOffset[1],textOffset[3] and textOffset[2]*h or textOffset[2]
 		end
 	end
-	dxDrawText(eleData.text,px,y,px+w-1,y+h-1,applyColorAlpha(eleData.textColor,parentAlpha),txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI,colorcoded)
+	dgsDrawText(eleData.text,px+offsetX,y+offsetY,px+w+offsetX,y+h+offsetY,applyColorAlpha(eleData.textColor,parentAlpha),txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordBreak,isPostGUI,colorCoded,subPixelPos,0,0,0,0,shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont)
 	return rndtgt,false,mx,my,0,0
 end

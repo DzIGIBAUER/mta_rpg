@@ -1,6 +1,36 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dx3dtext","dgsBasic","dgsType3D","dgsTypeScreen3D")
+dgsRegisterProperties("dgs-dx3dtext",{
+	alignment = 			{	{ PArg.String, PArg.String }	},
+	canBeBlocked = 			{	PArg.Bool, {
+											checkBuildings = PArg.Nil+PArg.Bool,
+											checkVehicles = PArg.Nil+PArg.Bool,
+											checkPeds = PArg.Nil+PArg.Bool,
+											checkObjects = PArg.Nil+PArg.Bool,
+											checkDummies = PArg.Nil+PArg.Bool,
+											seeThroughStuff = PArg.Nil+PArg.Bool,
+											ignoreSomeObjectsForCamera = PArg.Nil+PArg.Bool,
+											}
+							},
+	color = 				{	PArg.Color	},
+	colorCoded = 			{	PArg.Bool	},
+	dimension = 			{	PArg.Number	},
+	fadeDistance = 			{	PArg.Number	},
+	fixTextSize = 			{	PArg.Bool	},
+	font = 					{	PArg.Font+PArg.String	},
+	interior = 				{	PArg.Number	},
+	isBlocked = 			{	PArg.Bool, readOnly = true	},
+	isOnScreen = 			{	PArg.Bool, readOnly = true	},
+	maxDistance = 			{	PArg.Number	},
+	position = 				{	{ PArg.Number, PArg.Number, PArg.Number }	},
+	text = 					{	PArg.Text	},
+	textOffset = 			{	{ PArg.Number, PArg.Number }	},
+	textSize = 				{	{ PArg.Number, PArg.Number }	},
+	shadow = 				{	{ PArg.Number, PArg.Number, PArg.Color, PArg.Number+PArg.Bool+PArg.Nil, PArg.Font+PArg.Nil }, PArg.Nil	},
+})
 --Dx Functions
 local dxDrawLine = dxDrawLine
-local dxDrawText = dxDrawText
+local dgsDrawText = dgsDrawText
 local dxGetFontHeight = dxGetFontHeight
 local dxGetTextWidth = dxGetTextWidth
 --
@@ -10,7 +40,8 @@ local type = type
 local tableInsert = table.insert
 
 function dgsCreate3DText(...)
-	local x,y,z,text,color,font,sizeX,sizeY,maxDistance,colorcoded
+	local sRes = sourceResource or resource
+	local x,y,z,text,color,font,sizeX,sizeY,maxDistance,colorCoded
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
 		x = argTable.x or argTable[1]
@@ -22,9 +53,9 @@ function dgsCreate3DText(...)
 		scaleX = argTable.scaleX or argTable[7]
 		scaleX = argTable.scaleY or argTable[8]
 		maxDistance = argTable.maxDistance or argTable[9]
-		colorcoded = argTable.colorcoded or argTable[10]
+		colorCoded = argTable.colorCoded or argTable[10]
 	else
-		x,y,z,text,color,font,scaleX,scaleY,maxDistance,colorcoded = ...
+		x,y,z,text,color,font,scaleX,scaleY,maxDistance,colorCoded = ...
 	end
 	if not(type(x) == "number") then error(dgsGenAsrt(x,"dgsCreate3DText",1,"number")) end
 	if not(type(y) == "number") then error(dgsGenAsrt(y,"dgsCreate3DText",2,"number")) end
@@ -33,7 +64,7 @@ function dgsCreate3DText(...)
 	tableInsert(dgsScreen3DTable,text3d)
 	dgsSetType(text3d,"dgs-dx3dtext")
 	
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
@@ -41,53 +72,33 @@ function dgsCreate3DText(...)
 	
 	style = style.text3D
 	dgsElementData[text3d] = {
+		alignment = {"center", "center"},
 		renderBuffer = {},
 		position = {x,y,z},
 		textSize = {scaleX or 1,scaleY or 1},
+		textOffset = {0,0},
 		fixTextSize = false,
 		font = font or style.font or systemFont,
 		color = color or 0xFFFFFFFF,
-		colorcoded = colorcoded or false,
+		colorCoded = colorCoded or false,
 		maxDistance = maxDistance or 80,
 		fadeDistance = maxDistance or 80,
 		dimension = -1,
 		interior = -1,
 		canBeBlocked = false,
 		subPixelPositioning = true,
+		isBlocked = false,
+		isOnScreen = false,
 	}
-	dgsAttachToTranslation(text3d,resourceTranslation[sourceResource or getThisResource()])
+	dgsAttachToTranslation(text3d,resourceTranslation[sRes or getThisResource()])
 	if type(text) == "table" then
 		dgsElementData[text3d]._translationText = text
 		dgsSetData(text3d,"text",text)
 	else
 		dgsSetData(text3d,"text",tostring(text or ""))
 	end
-	triggerEvent("onDgsCreate",text3d,sourceResource)
+	triggerEvent("onDgsCreate",text3d,sRes)
 	return text3d
-end
-
-function dgs3DTextGetDimension(text)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextGetDimension",1,"dgs-dx3dtext")) end
-	return dgsElementData[text].dimension or -1
-end
-
-function dgs3DTextSetDimension(text,dimension)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextSetDimension",1,"dgs-dx3dtext")) end
-	local inRange = dimension >= -1 and dimension <= 65535
-	if not(type(dimension) == "number" and inRange) then error(dgsGenAsrt(dimension,"dgs3DTextSetDimension",2,"number","-1~65535",inRange and "Out Of Range")) end
-	return dgsSetData(text,"dimension",dimension-dimension%1)
-end
-
-function dgs3DTextGetInterior(text)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextGetInterior",1,"dgs-dx3dtext")) end
-	return dgsElementData[text].interior or -1
-end
-
-function dgs3DTextSetInterior(text,interior)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextSetInterior",1,"dgs-dx3dtext")) end
-	local inRange = interior >= -1
-	if not(type(interior) == "number" and inRange) then error(dgsGenAsrt(interior,"dgs3DTextSetInterior",2,"number","-1~+∞",inRange and "Out Of Range")) end
-	return dgsSetData(text,"interior",interior-interior%1)
 end
 
 function dgs3DTextAttachToElement(text,element,offX,offY,offZ)
@@ -127,24 +138,9 @@ function dgs3DTextGetAttachedOffsets(text,offX,offY,offZ)
 	return false
 end
 
-function dgs3DTextSetPosition(text,x,y,z)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextSetPosition",1,"dgs-dx3dtext")) end
-	if not(type(x) == "number") then error(dgsGenAsrt(x,"dgs3DTextSetPosition",2,"number")) end
-	if not(type(y) == "number") then error(dgsGenAsrt(y,"dgs3DTextSetPosition",3,"number")) end
-	if not(type(z) == "number") then error(dgsGenAsrt(z,"dgs3DTextSetPosition",4,"number")) end
-	return dgsSetData(text,"position",{x,y,z})
-end
-
-function dgs3DTextGetPosition(text)
-	if not(dgsGetType(text) == "dgs-dx3dtext") then error(dgsGenAsrt(text,"dgs3DTextGetPosition",1,"dgs-dx3dtext")) end
-	local pos = dgsElementData[text].position
-	return pos[1],pos[2],pos[3]
-end
-
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
-
 local g_canBeBlocked = {
 	checkBuildings = true,
 	checkVehicles = true,
@@ -163,7 +159,7 @@ dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 		if isElement(attachTable[1]) then
 			if isElementStreamedIn(attachTable[1]) then
 				wx,wy,wz = getPositionFromElementOffset(attachTable[1],attachTable[2],attachTable[3],attachTable[4])
-				eleData.position = {wx,wy,wz}
+				posTable[1],posTable[2],posTable[3] = wx,wy,wz
 			else
 				isRender = false
 			end
@@ -189,27 +185,29 @@ dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 				if canBeBlocked.seeThroughStuff == nil then canBeBlocked.seeThroughStuff = g_canBeBlocked.seeThroughStuff end
 				if canBeBlocked.ignoreSomeObjectsForCamera == nil then canBeBlocked.ignoreSomeObjectsForCamera = g_canBeBlocked.ignoreSomeObjectsForCamera end
 			end
-			local textSizeX,textSizeY = eleData.textSize[1],eleData.textSize[2]
-			local colorcoded = eleData.colorcoded
 			local fadeDistance = eleData.fadeDistance
-			local text = eleData.text
-			
 			local res = eleData.resource or "global"
 			local style = styleManager.styles[res]
 			local using = style.using
 			style = style.loaded[style.using]
 			local systemFont = style.systemFontElement
-
-			local font = eleData.font or systemFont
-			local subPixelPositioning = eleData.subPixelPositioning
-			if (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, camZ, canBeBlocked.checkBuildings, canBeBlocked.checkVehicles, canBeBlocked.checkPeds, canBeBlocked.checkObjects, canBeBlocked.checkDummies, canBeBlocked.seeThroughStuff,canBeBlocked.ignoreSomeObjectsForCamera))) then
+			eleData.isBlocked = (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, camZ, canBeBlocked.checkBuildings, canBeBlocked.checkVehicles, canBeBlocked.checkPeds, canBeBlocked.checkObjects, canBeBlocked.checkDummies, canBeBlocked.seeThroughStuff,canBeBlocked.ignoreSomeObjectsForCamera)))
+			if eleData.isBlocked then
 				local fadeMulti = 1
 				if maxDistance > fadeDistance and distance >= fadeDistance then
 					fadeMulti = 1-(distance-fadeDistance)/(maxDistance-fadeDistance)
 				end
 				local x,y = getScreenFromWorldPosition(wx,wy,wz,0.5)
-				if x and y then
-					local x,y = x-x%1,y-y%1
+				eleData.isOnScreen = x and y
+				if eleData.isOnScreen then
+					local offsetX,offsetY = eleData.textOffset[1],eleData.textOffset[2]
+					local subPixelPositioning = eleData.subPixelPositioning
+					local colorCoded = eleData.colorCoded
+					local text = eleData.text
+					local textSizeX,textSizeY = eleData.textSize[1],eleData.textSize[2]
+					local font = eleData.font or systemFont
+					local alignment = eleData.alignment
+					local x,y = x+offsetX-x%1,y+offsetY-y%1
 					if eleData.fixTextSize then
 						distance = 50
 					end
@@ -218,28 +216,16 @@ dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 					local sizeY = textSizeY*textSizeY/distance*50
 					local color = applyColorAlpha(eleData.color,parentAlpha*fadeMulti)
 					local shadow = eleData.shadow
+					local shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont
 					if shadow then
-						local shadowoffx,shadowoffy,shadowc,shadowIsOutline = shadow[1],shadow[2],shadow[3],shadow[4]
-						if shadowoffx and shadowoffy and shadowc then
-							local shadowText = text
-							if colorcoded then
-								shadowText = text:gsub('#%x%x%x%x%x%x','').."\n"
-							end
-							local shadowc = applyColorAlpha(shadowc,parentAlpha*fadeMulti)
-							local shadowoffx,shadowoffy = shadowoffx*antiDistance*50,shadowoffy*antiDistance*50
-							dxDrawText(shadowText,x+shadowoffx,y+shadowoffy,_,_,shadowc,sizeX,sizeY,font,"center","center",false,false,false,false,subPixelPositioning)
-							if shadowIsOutline then
-								dxDrawText(shadowText,x-shadowoffx,y+shadowoffy,_,_,shadowc,sizeX,sizeY,font,"center","center",false,false,false,false,subPixelPositioning)
-								dxDrawText(shadowText,x-shadowoffx,y-shadowoffy,_,_,shadowc,sizeX,sizeY,font,"center","center",false,false,false,false,subPixelPositioning)
-								dxDrawText(shadowText,x+shadowoffx,y-shadowoffy,_,_,shadowc,sizeX,sizeY,font,"center","center",false,false,false,false,subPixelPositioning)
-							end
-						end
+						shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont = shadow[1]*antiDistance*50,shadow[2]*antiDistance*50,shadow[3],shadow[4],shadow[5]
+						shadowColor = applyColorAlpha(shadowColor or white,parentAlpha*fadeMulti)
 					end
-					dxDrawText(text,x,y,x,y,color,sizeX,sizeY,font,"center","center",false,false,false,colorcoded,subPixelPositioning)
+					dgsDrawText(text,x,y,x,y,color,sizeX,sizeY,font,alignment[1],alignment[2],false,false,false,colorCoded,subPixelPositioning,0,0,0,0,shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont)
 					------------------------------------OutLine
 					local outlineData = eleData.outline
 					if outlineData then
-						local shadowText = colorcoded and text:gsub('#%x%x%x%x%x%x','') or text
+						local shadowText = colorCoded and text:gsub('#%x%x%x%x%x%x','') or text
 						local w,h = dxGetTextWidth(shadowText,sizeX,font),dxGetFontHeight(sizeY,font)
 						local x,y=x-w*0.5,y-h*0.5
 						local sideColor = outlineData[3]
@@ -289,6 +275,8 @@ dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherit
 						end
 					end
 				end
+			else
+				eleData.isOnScreen = false
 			end
 		end
 	end

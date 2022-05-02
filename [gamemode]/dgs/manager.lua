@@ -1,3 +1,4 @@
+dgsLogLuaMemory()
 local loadstring = loadstring
 -------------------------------------------------Parent/Layer Manager
 --Speed Up
@@ -13,37 +14,86 @@ local mathMin = math.min
 local mathMax = math.max
 local mathClamp = math.restrict
 local getElementType = getElementType
-
+-------------------------------------------------------Table Defines
+--Animations
+animQueue = {}
+--Render Info
+dgsRenderInfo = {
+	frames = 0,
+	RTRestoreNeed = false,
+	renderingResource = {},
+}
+--Render Settings
+dgsRenderSetting = {
+	postGUI = false,
+	renderPriority = "normal",
+}
+--Render Functions
+dgsRenderer = {}
+dgsChildRenderer = {}
+dgs3DRenderer = {}
+dgsCustomTexture = {}
+dgsBackEndRenderer = {
+	register = function(self,dgsType,theFunction)
+		self[dgsType] = theFunction
+	end,
+}
+--Collider
+dgsCollider = {
+	default = function(source,mx,my,x,y,w,h)
+		if mx >= x and mx <= x+w and my >= y and my <= y+h then
+			return source
+		end
+	end,
+}
+--Plugin System
+dgsPluginTable = {}
+--
 --Parent System
+BackEndTable = {}			--Store Back-end Render Element (If it has back-end renderer)
 BottomFatherTable = {}		--Store Bottom Father Element
 CenterFatherTable = {}		--Store Center Father Element (Default)
 TopFatherTable = {}			--Store Top Father Element
 dgsWorld3DTable = {}
 dgsScreen3DTable = {}
-FatherTable = {}			--Store Father Element
-ChildrenTable = {}			--Store Children Element
 LayerCastTable = {center=CenterFatherTable,top=TopFatherTable,bottom=BottomFatherTable}
 --
 --Element Data System
 dgsElementData = {[resourceRoot] = {}}		----The Global BuiltIn DGS Element Data Table
-local l_dgsElementData = dgsElementData
+--Property List
+dgsElementPropertyList = {}					----The Registered exported property list
 --
 --Element Type
 dgsElementType = {}
-local l_dgsElementType = dgsElementType
 --
+--Plugin Creation Manager
+addEventHandler("onDgsPluginCreate",resourceRoot,function(theResource)
+	insertResource(theResource,source)
+	local typ = dgsElementData[source].asPlugin
+	dgsPluginTable[typ] = dgsPluginTable[typ] or {}
+	table.insert(dgsPluginTable[typ],source)
+	addEventHandler("onDgsDestroy",source,function()
+		local id = table.find(dgsPluginTable[typ],source)
+		if id then
+			table.remove(dgsPluginTable[typ],id)
+		end
+	end,false)
+end)
+
+--------------------------------------------------------Layer System
 function dgsSetLayer(dgsEle,layer,forceDetatch)
 	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsSetLayer",1,"dgs-dxelement")) end
 	if dgsElementType[dgsEle] == "dgs-dxtab" then return false end
 	if not(layerBuiltIn[layer]) then error(dgsGenAsrt(layer,"dgsSetLayer",2,"string","top/center/bottom")) end
-	local hasParent = isElement(FatherTable[dgsEle])
+	local parent = dgsElementData[dgsEle].parent
+	local hasParent = isElement(parent)
 	if hasParent and not forceDetatch then return false end
 	if hasParent then
-		local id = tableFind(ChildrenTable[FatherTable[dgsEle]],dgsEle)
+		local id = tableFind(dgsElementData[parent].children,dgsEle)
 		if id then
-			tableRemove(ChildrenTable[FatherTable[dgsEle]],id)
+			tableRemove(dgsElementData[parent].children,id)
 		end
-		FatherTable[dgsEle] = nil
+		dgsElementData[dgsEle].parent = nil
 	end
 	local oldLayer = dgsElementData[dgsEle].alwaysOn or "center"
 	if oldLayer == layer then return false end
@@ -65,8 +115,8 @@ function dgsSetCurrentLayerIndex(dgsEle,index)
 	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsSetCurrentLayerIndex",1,"dgs-dxelement")) end
 	if not(type(index) == "number") then error(dgsGenAsrt(index,"dgsSetCurrentLayerIndex",2,"number")) end
 	local layer = dgsElementData[dgsEle].alwaysOn or "center"
-	local hasParent = isElement(FatherTable[dgsEle])
-	local theTable = hasParent and ChildrenTable[FatherTable[dgsEle]] or LayerCastTable[layer]
+	local parent = dgsElementData[dgsEle].parent
+	local theTable = isElement(parent) and dgsElementData[parent].children or LayerCastTable[layer]
 	local index = mathClamp(index,1,#theTable+1)
 	local id = tableFind(theTable,dgsEle)
 	if id then
@@ -79,8 +129,8 @@ end
 function dgsGetCurrentLayerIndex(dgsEle)
 	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsGetCurrentLayerIndex",1,"dgs-dxelement")) end
 	local layer = dgsElementData[dgsEle].alwaysOn or "center"
-	local hasParent = isElement(FatherTable[dgsEle])
-	local theTable = hasParent and ChildrenTable[FatherTable[dgsEle]] or LayerCastTable[layer]
+	local parent = dgsElementData[dgsEle].parent
+	local theTable = isElement(parent) and dgsElementData[parent].children or LayerCastTable[layer]
 	return tableFind(theTable,dgsEle) or false
 end
 
@@ -89,12 +139,17 @@ function dgsGetLayerElements(layer)
 	return #LayerCastTable[layer] or false
 end
 
-function dgsGetChild(parent,id) return ChildrenTable[parent][id] or false end
-function dgsGetChildren(parent) return ChildrenTable[parent] or {} end
-function dgsGetParent(child) return FatherTable[child] or false end
-function dgsGetDxGUINoParent(alwaysBottom) return alwaysBottom and BottomFatherTable or CenterFatherTable end
+function dgsGetElementsInLayer(layer)
+	if layer == true or layer:lower() == "bottom" then
+		return BottomFatherTable
+	elseif layer:lower() == "top" then
+		return TopFatherTable
+	else
+		return CenterFatherTable
+	end
+end
 
-function dgsGetDxGUIFromResource(res)
+function dgsGetElementsFromResource(res)
 	local res = res or sourceResource
 	if res then
 		local serialized,cnt = {},0
@@ -104,32 +159,54 @@ function dgsGetDxGUIFromResource(res)
 		end
 		return serialized
 	end
+	return false
 end
 
-function dgsSetParent(child,parent,nocheckfather,noUpdatePosSize)
-	if parent == resourceRoot then parent = nil end
+function dgsGetChild(dgsEle,id)
+	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsGetChild",1,"dgs-dxelement")) end
+	if not(type(id) == "number") then error(dgsGenAsrt(id,"dgsGetChild",2,"number")) end
+	if dgsElementData[dgsEle].children then
+		return dgsElementData[dgsEle].children[id] or false
+	end
+	return false
+end
+
+function dgsGetChildren(dgsEle)
+	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsGetChildren",1,"dgs-dxelement")) end
+	return dgsElementData[dgsEle].children or {}
+end
+
+function dgsGetParent(dgsEle)
+	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsGetParent",1,"dgs-dxelement")) end
+	return dgsElementData[dgsEle] and dgsElementData[dgsEle].parent or false
+
+end
+
+function dgsSetParent(child,newParent,nocheckfather,noUpdatePosSize)
+	if newParent == resourceRoot then newParent = nil end
 	if not(dgsIsType(child)) then error(dgsGenAsrt(child,"dgsSetParent",1,"dgs-dxelement")) end
 	if not(not dgsElementData[child] or not dgsElementData[child].attachTo) then error(dgsGenAsrt(child,"dgsSetParent",1,_,_,_,"attached dgs element can not have a parent")) end
-	local _parent = FatherTable[child]
-	local parentTable = isElement(_parent) and ChildrenTable[_parent] or CenterFatherTable
-	if isElement(parent) then
-		if not dgsIsType(parent) then return end
+	if not dgsElementData[child] then dgsElementData[child] = {} end
+	local oldParent = dgsElementData[child].parent
+	local parentTable = isElement(oldParent) and dgsElementData[oldParent].children or CenterFatherTable
+	if isElement(newParent) then
+		if not dgsIsType(newParent) then return end
 		if not nocheckfather then
 			local id = tableFind(parentTable,child)
 			if id then
 				tableRemove(parentTable,id)
 			end
 		end
-		FatherTable[child] = parent
-		ChildrenTable[parent] = ChildrenTable[parent] or {}
-		tableInsert(ChildrenTable[parent],child)
-		setElementParent(child,parent)
+		dgsElementData[child].parent = newParent
+		if not dgsElementData[newParent].children then dgsElementData[newParent].children = {} end
+		tableInsert(dgsElementData[newParent].children,child)
+		setElementParent(child,newParent)
 	else
 		local id = tableFind(parentTable,child)
 		if id then
 			tableRemove(parentTable,id)
 		end
-		FatherTable[id] = nil
+		dgsElementData[child].parent = nil
 		tableInsert(CenterFatherTable,child)
 		setElementParent(child,resourceRoot)
 	end
@@ -143,89 +220,103 @@ function dgsSetParent(child,parent,nocheckfather,noUpdatePosSize)
 	if dgsElementType[child] == "dgs-dxscrollpane" then
 		local scrollbars = (dgsElementData[child] or {}).scrollbars
 		if scrollbars then
-			dgsSetParent(scrollbars[1],parent)
-			dgsSetParent(scrollbars[2],parent)
+			dgsSetParent(scrollbars[1],newParent)
+			dgsSetParent(scrollbars[2],newParent)
 			configScrollPane(child)
 		end
 	end
 	return true
 end
 
-function blurEditMemo()
-	local dgsType = dgsGetType(MouseData.focused)
+function blurEditMemo(dgsEle)
+	local dgsType = dgsGetType(dgsEle or MouseData.focused)
 	if dgsType == "dgs-dxedit" then
 		guiBlur(GlobalEdit)
+		if not dgsElementData[GlobalEdit] then dgsElementData[GlobalEdit] = {} end
+		dgsElementData[GlobalEdit].linkedDxEdit = nil
 	elseif dgsType == "dgs-dxmemo" then
 		guiBlur(GlobalMemo)
+		if not dgsElementData[GlobalMemo] then dgsElementData[GlobalMemo] = {} end
+		dgsElementData[GlobalMemo].linkedDxMemo = nil
 	end
 end
 
-function dgsBringToFront(dgsEle,mouse,dontMoveParent,dontChangeData)
-	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsBringToFront",1,"dgs-dxelement")) end
-	local parent = FatherTable[dgsEle]	--Get Parent
-	local lastFront = MouseData.focused
-	if not dontChangeData then
-		MouseData.focused = dgsEle
-		if dgsGetType(dgsEle) == "dgs-dxedit" then
-			MouseData.editCursor = true
-			resetTimer(MouseData.EditMemoTimer)
-			guiFocus(GlobalEdit)
-			dgsElementData[GlobalEdit].linkedDxEdit = dgsEle
-		elseif dgsElementType[dgsEle] == "dgs-dxmemo" then
-			MouseData.editCursor = true
-			resetTimer(MouseData.EditMemoTimer)
-			guiFocus(GlobalMemo)
-			dgsElementData[GlobalMemo].linkedDxMemo = dgsEle
-		elseif dgsEle ~= lastFront then
-			local dgsType = dgsGetType(lastFront)
-			if dgsType == "dgs-dxedit" then
-				guiBlur(GlobalEdit)
-			elseif dgsType == "dgs-dxmemo" then
-				guiBlur(GlobalMemo)
-			end
-		end
-		if isElement(lastFront) and dgsElementData[lastFront].clearSelection then
-			dgsSetData(lastFront,"selectfrom",dgsElementData[lastFront].cursorpos)
-		end
-	end
+function dgsBringToFront(dgsEle,mouse,dontMoveParent,dontFocus)
+	local eleType = dgsIsType(dgsEle)
+	if not(eleType) then error(dgsGenAsrt(dgsEle,"dgsBringToFront",1,"dgs-dxelement")) end
+	local parent = dgsElementData[dgsEle].parent	--Get Parent
+	if not dontFocus then dgsFocus(dgsEle) end
 	if dgsElementData[dgsEle].changeOrder then
 		if not isElement(parent) then
-			local layer = dgsElementData[dgsEle].alwaysOn or "center"
-			local layerTable = LayerCastTable[layer]
-			local id = tableFind(layerTable,dgsEle)
-			if id then
-				tableRemove(layerTable,id)
-				tableInsert(layerTable,dgsEle)
+			if dgsTypeScreen3D[eleType] then
+				local id = tableFind(dgsScreen3DTable,dgsEle)
+				if id then
+					tableRemove(dgsScreen3DTable,id)
+					tableInsert(dgsScreen3DTable,dgsEle)
+				end
+			elseif dgsTypeWorld3D[eleType] then
+				local id = tableFind(dgsWorld3DTable,dgsEle)
+				if id then
+					tableRemove(dgsWorld3DTable,id)
+					tableInsert(dgsWorld3DTable,dgsEle)
+				end
+			else
+				local layer = dgsElementData[dgsEle].alwaysOn or "center"
+				local layerTable = LayerCastTable[layer]
+				local id = tableFind(layerTable,dgsEle)
+				if id then
+					tableRemove(layerTable,id)
+					tableInsert(layerTable,dgsEle)
+				end
 			end
 		else
 			local parents = dgsEle
 			while true do
-				local uparents = FatherTable[parents]	--Get Parent
+				local uparents = dgsElementData[parents].parent	--Get Parent
+				local eleType = dgsIsType(uparents)
 				if isElement(uparents) then
-					local children = ChildrenTable[uparents]
+					local children = dgsElementData[uparents].children
 					local id = tableFind(children,parents)
 					if id then
 						tableRemove(children,id)
 						tableInsert(children,parents)
 						if dgsElementType[parents] == "dgs-dxscrollpane" then
 							local scrollbar = dgsElementData[parents].scrollbars
-							dgsBringToFront(scrollbar[1],"left",_,true)
-							dgsBringToFront(scrollbar[2],"left",_,true)
+							dgsBringToFront(scrollbar[1],"left",_,true,false)
+							dgsBringToFront(scrollbar[2],"left",_,true,false)
 						end
 					end
 					parents = uparents
 				else
-					local id = tableFind(CenterFatherTable,parents)
-					if id then
-						tableRemove(CenterFatherTable,id)
-						tableInsert(CenterFatherTable,parents)
-						if dgsElementType[parents] == "dgs-dxscrollpane" then
-							local scrollbar = dgsElementData[parents].scrollbars
-							dgsBringToFront(scrollbar[1],"left",_,true)
-							dgsBringToFront(scrollbar[2],"left",_,true)
+					if dgsTypeScreen3D[eleType] then
+						local id = tableFind(dgsScreen3DTable,parents)
+						if id then
+							tableRemove(dgsScreen3DTable,id)
+							tableInsert(dgsScreen3DTable,parents)
 						end
+						break
+					elseif dgsTypeWorld3D[eleType] then
+						local id = tableFind(dgsWorld3DTable,parents)
+						if id then
+							tableRemove(dgsWorld3DTable,id)
+							tableInsert(dgsWorld3DTable,parents)
+						end
+						break
+					else
+						local layer = dgsElementData[parents].alwaysOn or "center"
+						local layerTable = LayerCastTable[layer]
+						local id = tableFind(layerTable,parents)
+						if id then
+							tableRemove(layerTable,id)
+							tableInsert(layerTable,parents)
+							if dgsElementType[parents] == "dgs-dxscrollpane" then
+								local scrollbar = dgsElementData[parents].scrollbars
+								dgsBringToFront(scrollbar[1],"left",_,true,false)
+								dgsBringToFront(scrollbar[2],"left",_,true,false)
+							end
+						end
+						break
 					end
-					break
 				end
 				if dontMoveParent then
 					break
@@ -233,11 +324,9 @@ function dgsBringToFront(dgsEle,mouse,dontMoveParent,dontChangeData)
 			end
 		end
 	end
-	dgsFocus(dgsEle)
-	lastFront = dgsEle
 	if mouse == "left" then
 		MouseData.clickl = dgsEle
-		if MouseData.hitData3D[0] and MouseData.hitData3D[5] then
+		if not MouseData.hitData2D[0] and MouseData.hitData3D[0] and MouseData.hitData3D[5] then
 			MouseData.lock3DInterface = MouseData.hitData3D[5]
 		end
 		MouseData.clickData = nil
@@ -250,9 +339,9 @@ end
 function dgsMoveToBack(dgsEle)
 	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsMoveToBack",1,"dgs-dxelement")) end
 	if dgsElementData[dgsEle].changeOrder then
-		local parent = FatherTable[dgsEle]	--Get Parent
+		local parent = dgsElementData[dgsEle].parent	--Get Parent
 		if isElement(parent) then
-			local children = ChildrenTable[parent]
+			local children = dgsElementData[parent].children
 			local id = tableFind(children,dgsEle)
 			if id then
 				tableRemove(children,id)
@@ -275,79 +364,44 @@ function dgsMoveToBack(dgsEle)
 end
 
 ------------------------------------------------Type Manager
-dgsType = {
-	"dgs-dx3dinterface",
-	"dgs-dx3dline",
-	"dgs-dx3dtext",
-	"dgs-dx3dimage",
-	"dgs-dxbutton",
-	"dgs-dxedit",
-	"dgs-dxmemo",
-	"dgs-dxdetectarea",
-	"dgs-dxgridlist",
-	"dgs-dximage",
-	"dgs-dxradiobutton",
-	"dgs-dxcheckbox",
-	"dgs-dxlabel",
-	"dgs-dxline",
-	"dgs-dxscrollbar",
-	"dgs-dxscrollpane",
-	"dgs-dxscalepane",
-	"dgs-dxselector",
-	"dgs-dxswitchbutton",
-	"dgs-dxwindow",
-	"dgs-dxprogressbar",
-	"dgs-dxtabpanel",
-	"dgs-dxtab",
-	"dgs-dxcombobox",
-	"dgs-dxcombobox-Box",
-	"dgs-dxcustomrenderer",
-	"dgs-dxbrowser",
+dgsType,dgsPluginType = {},{}
+
+---Userdata Type
+MTAUserDataType = {
+	["resource-data"] = true,
+	["xml-node"] = true,
+	["lua-timer"] = true,
+	["vector2"] = true,
+	["vector3"] = true,
+	["vector4"] = true,
+	["matrix"] = true,
 }
 
-dgsPluginType = {
-
-}
-
-dgsScreen3DType = {
-	"dgs-dx3dimage",
-	"dgs-dx3dtext",
-}
-
-dgsWorld3DType = {
-	"dgs-dx3dinterface",
-	"dgs-dx3dline",
-}
-
-for i=1,#dgsType do
-	dgsType[dgsType[i]] = dgsType[i]
-end
-
-for i=1,#dgsScreen3DType do
-	dgsScreen3DType[dgsScreen3DType[i]] = dgsScreen3DType[i]
-end
-
-for i=1,#dgsWorld3DType do
-	dgsWorld3DType[dgsWorld3DType[i]] = dgsWorld3DType[i]
-end
-
-setElementData(resourceRoot,"DGSType",dgsType,false)
-
-function dgsAddType(typeName,isPlugin)
-	if isPlugin then
-		dgsPluginType[#dgsPluginType+1] = typeName
-		dgsPluginType[typeName] = typeName
-	else
-		dgsType[#dgsType+1] = typeName
-		dgsType[typeName] = typeName
+function dgsRegisterType(typeName,...)
+	for i=1,select("#",...) do
+		local tag = select(i,...)
+		if not _G[tag] then _G[tag] = {} end
+		_G[tag][typeName] = typeName
 	end
+	dgsType[typeName] = typeName
 	return true
+end
+
+function dgsRegisterPluginType(typeName)
+	dgsPluginType[typeName] = typeName
 end
 
 function dgsGetType(dgsEle)
 	if isElement(dgsEle) then return tostring(dgsElementType[dgsEle] or getElementType(dgsEle)) end
 	local theType = type(dgsEle)
-	if theType == "userdata" and dgsElementType[dgsEle] then return "destroyed element" end
+	if theType == "userdata" then
+		local userdataType = getUserdataType(dgsEle)
+		if MTAUserDataType[userdataType] then
+			return userdataType
+		else
+			return "destroyed element"
+		end
+	end
 	return theType
 end
 
@@ -357,12 +411,12 @@ function dgsIsType(dgsEle,isType)
 			local eleData = dgsElementData[dgsEle]
 			if isType == (eleData and eleData.asPlugin) then return true end
 			if isType == dgsElementType[dgsEle] then return true end
+			if _G[isType] and _G[isType][dgsElementType[dgsEle]] then return true end
 			return getElementType(dgsEle) == isType
 		else
 			return type(dgsEle) == isType
 		end
 	else
-	
 		if not isElement(dgsEle) then return false end
 		local eleData = dgsElementData[dgsEle]
 		if eleData and eleData.asPlugin then
@@ -383,255 +437,27 @@ function dgsSetType(dgsEle,myType)
 	return false
 end
 
-function dgsIsMaterialElement(ele)
-	if isElement(ele) then
-		local eleType = getElementType(ele)
-		return eleType == "shader" or eleType == "texture"
+function dgsRegisterDeprecatedFunction(fncNameOld,fncNameNew)
+	_G[fncNameOld] = function(...)
+		if not getElementData(resourceRoot,"DGS-disableCompatibilityCheck") then
+			if not getElementData(localPlayer,"DGS-DEBUG-C") then
+				outputDebugString("Deprecated function @'"..fncNameOld.."', replace with '"..fncNameNew.."'. See information below, or run again with command /debugdgs c",2)
+				if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+					triggerEvent("DGSI_onDebug",sourceResourceRoot or resourceRoot,"FunctionCompatibility",fncNameOld,fncNameNew)
+				end
+			else
+				if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+					triggerEvent("DGSI_onDebug",sourceResourceRoot or resourceRoot,"FunctionCompatibility",fncNameOld,fncNameNew)
+				end
+				error("Found deprecated function @'"..fncNameOld.."', replace with '"..fncNameNew.."'")
+			end
+		end
+		return _G[fncNameNew](...)
 	end
-	return false
 end
 
 ------------------------------------------------Property Manager
-local dgsDataFunctions = {
-	["dgs-dxscrollbar"] = {
-		length = function(dgsEle,key,value,oldValue)
-			local absSize = dgsElementData[dgsEle].absSize
-			local w,h = absSize[1],absSize[2]
-			local isHorizontal = dgsElementData[dgsEle].isHorizontal
-			if (value[2] and value[1]*(isHorizontal and w-h*2 or h-w*2) or value[1]) < dgsElementData[dgsEle].minLength then
-				dgsElementData[dgsEle].length = {dgsElementData[dgsEle].minLength,false}
-			end
-		end,
-		position = function(dgsEle,key,value,oldValue)
-			if oldValue then
-				if not dgsElementData[dgsEle].locked then
-					local grades = dgsElementData[dgsEle].grades
-					local scaler = dgsElementData[dgsEle].map
-					local nValue,oValue = value,oldValue
-					if grades then
-						nValue,oValue = nValue/100*grades+0.5,oValue/100*grades+0.5
-						nValue,oValue = nValue-nValue%1,oValue-oValue%1
-						dgsSetData(dgsEle,"currentGrade",nValue)
-						dgsElementData[dgsEle][key] = nValue/grades*100
-					else
-						dgsElementData[dgsEle][key] = nValue
-					end
-					triggerEvent("onDgsElementScroll",dgsEle,dgsEle,dgsElementData[dgsEle][key],oldValue,nValue,oValue)
-				else
-					dgsElementData[dgsEle][key] = oldValue
-				end
-			end
-		end,
-		grades = function(dgsEle,key,value,oldValue)
-			if value then
-				local currentGrade = dgsElementData[dgsEle].position/100*value+0.5
-				dgsSetData(dgsEle,"currentGrade",currentGrade-currentGrade%1)
-			else
-				dgsSetData(dgsEle,"currentGrade",false)
-			end
-		end,
-	},
-	["dgs-dxgridlist"] = {
-		columnHeight = function(dgsEle,key,value,oldValue)
-			configGridList(dgsEle)
-		end,
-		mode = function(dgsEle,key,value,oldValue)
-			configGridList(dgsEle)
-		end,
-		scrollBarThick = function(dgsEle,key,value,oldValue)
-			configGridList(dgsEle)
-		end,
-		leading = function(dgsEle,key,value,oldValue)
-			configGridList(dgsEle)
-		end,
-		rowData = function(dgsEle,key,value,oldValue)
-			if dgsElementData[dgsEle].autoSort then
-				dgsElementData[dgsEle].nextRenderSort = true
-			end
-		end,
-		rowMoveOffset = function(dgsEle,key,value,oldValue)
-			dgsGridListUpdateRowMoveOffset(dgsEle)
-		end,
-		defaultSortFunctions = function(dgsEle,key,value,oldValue)
-			local sortFunction = dgsElementData[dgsEle].sortFunction
-			local oldDefSortFnc = oldValue
-			local oldUpperSortFnc = sortFunctions[oldDefSortFnc[1]]
-			local oldLowerSortFnc = sortFunctions[oldDefSortFnc[2]]
-			local defSortFnc = dgsElementData[dgsEle].defaultSortFunctions
-			local upperSortFnc = sortFunctions[defSortFnc[1]]
-			local lowerSortFnc = sortFunctions[defSortFnc[2]]
-			local oldSort = sortFunction == oldLowerSortFnc and lowerSortFnc or upperSortFnc
-		end,
-	},
-	["dgs-dxscrollpane"] = {
-		scrollBarThick = function(dgsEle,key,value,oldValue)
-			configScrollPane(dgsEle)
-		end,
-		scrollBarState = function(dgsEle,key,value,oldValue)
-			configScrollPane(dgsEle)
-		end,
-		scrollBarOffset = function(dgsEle,key,value,oldValue)
-			configScrollPane(dgsEle)
-		end,
-		scrollBarLength = function(dgsEle,key,value,oldValue)
-			configScrollPane(dgsEle)
-		end,
-		ignoreParentTitle = function(dgsEle,key,value,oldValue)
-			configPosSize(dgsEle,false,true)
-			configScrollPane(dgsEle)
-		end,
-		ignoreTitle = function(dgsEle,key,value,oldValue)
-			local children = dgsGetChildren(dgsEle)
-			for i=1,#children do
-				if not dgsElementData[children[i]].ignoreParentTitle then
-					configPosSize(children[i],false,true)
-					configScrollPane(children[i])
-				end
-			end
-		end,
-	},
-	["dgs-dxswitchbutton"] = {
-		state = function(dgsEle,key,value,oldValue)
-			triggerEvent("onDgsSwitchButtonStateChange",dgsEle,value,oldValue)
-		end,
-	},
-	["dgs-dxcombobox"] = {
-		scrollBarThick = function(dgsEle,key,value,oldValue)
-			assert(type(value) == "number","Bad argument 'dgsSetData' at 3,expect number got"..type(value))
-			local scrollbar = dgsElementData[dgsEle].scrollbar
-			configComboBox(dgsEle)
-		end,
-		listState = function(dgsEle,key,value,oldValue)
-			triggerEvent("onDgsComboBoxStateChange",dgsEle,value == 1 and true or false)
-		end,
-		viewCount = function(dgsEle,key,value,oldValue)
-			dgsComboBoxSetViewCount(dgsEle,value)
-		end,
-		itemHeight = function(dgsEle,key,value,oldValue)
-			if dgsElementData[dgsEle].viewCount then
-				dgsComboBoxSetViewCount(dgsEle,dgsElementData[dgsEle].viewCount)
-			end
-		end,
-	},
-	["dgs-dxtabpanel"] = {
-		selected = function(dgsEle,key,value,oldValue)
-			local old,new = oldValue,value
-			local tabs = dgsElementData[dgsEle].tabs
-			triggerEvent("onDgsTabPanelTabSelect",dgsEle,new,old,tabs[new],tabs[old])
-			if isElement(tabs[new]) then
-				triggerEvent("onDgsTabSelect",tabs[new],new,old,tabs[new],tabs[old])
-			end
-		end,
-		tabPadding = function(dgsEle,key,value,oldValue)
-			local width = dgsElementData[dgsEle].absSize[1]
-			local change = value[2] and value[1]*width or value[1]
-			local old = oldValue[2] and oldValue[1]*width or oldValue[1]
-			local tabs = dgsElementData[dgsEle].tabs
-			dgsSetData(dgsEle,"tabLengthAll",dgsElementData[dgsEle].tabLengthAll+(change-old)*#tabs*2)
-		end,
-		tabGapSize = function(dgsEle,key,value,oldValue)
-			local width = dgsElementData[dgsEle].absSize[1]
-			local change = value[2] and value[1]*width or value[1]
-			local old = oldValue[2] and oldValue[1]*width or oldValue[1]
-			local tabs = dgsElementData[dgsEle].tabs
-			dgsSetData(dgsEle,"tabLengthAll",dgsElementData[dgsEle].tabLengthAll+(change-old)*mathMax((#tabs-1),1))
-		end,
-		tabAlignment = function(dgsEle,key,value,oldValue)
-			dgsElementData[dgsEle].showPos = 0
-		end,
-		tabHeight = function(dgsEle,key,value,oldValue)
-			dgsElementData[dgsEle].configNextFrame = true
-		end,
-	},
-	["dgs-dxtab"] = {
-		text = function(dgsEle,key,value,oldValue)
-			if type(value) == "table" then
-				dgsElementData[dgsEle]._translationText = value
-				value = dgsTranslate(dgsEle,value,sourceResource)
-			else
-				dgsElementData[dgsEle]._translationText = nil
-			end
-			local tabpanel = dgsElementData[dgsEle].parent
-			local w = dgsElementData[tabpanel].absSize[1]
-			local t_minWid = dgsElementData[tabpanel].tabMinWidth
-			local t_maxWid = dgsElementData[tabpanel].tabMaxWidth
-			local minwidth = t_minWid[2] and t_minWid[1]*w or t_minWid[1]
-			local maxwidth = t_maxWid[2] and t_maxWid[1]*w or t_maxWid[1]
-			dgsElementData[dgsEle].text = tostring(value)
-			dgsSetData(dgsEle,"width",mathClamp(dxGetTextWidth(tostring(value),dgsElementData[dgsEle].textSize[1],dgsElementData[dgsEle].font or dgsElementData[tabpanel].font),minwidth,maxwidth))
-			return triggerEvent("onDgsTextChange",dgsEle)
-		end,
-		width = function(dgsEle,key,value,oldValue)
-			local tabpanel = dgsElementData[dgsEle].parent
-			dgsSetData(tabpanel,"tabLengthAll",dgsElementData[tabpanel].tabLengthAll+(value-oldValue))
-		end,
-	},
-	["dgs-dxedit"] = {
-		text = function(dgsEle,key,value,oldValue)
-			handleDxEditText(dgsEle,value)
-		end,
-		textSize = function(dgsEle,key,value,oldValue)
-			dgsElementData[dgsEle].textFontLen = dxGetTextWidth(dgsElementData[dgsEle].text,value[1],dgsElementData[dgsEle].font)
-		end,
-		font = function(dgsEle,key,value,oldValue)
-			local eleData = dgsElementData[dgsEle]
-			eleData.textFontLen = dxGetTextWidth(eleData.text,eleData.textSize[1],eleData.font)
-		end,
-		padding = function(dgsEle,key,value,oldValue)
-			configEdit(dgsEle)
-		end,
-	},
-	["dgs-dxmemo"] = {
-		text = function(dgsEle,key,value,oldValue)
-			return handleDxMemoText(dgsEle,value)
-		end,
-		scrollBarThick = function(dgsEle,key,value,oldValue)
-			configMemo(dgsEle)
-		end,
-		textSize = function(dgsEle,key,value,oldValue)
-			dgsMemoRebuildTextTable(dgsEle)
-		end,
-		font = function(dgsEle,key,value,oldValue)
-			dgsMemoRebuildTextTable(dgsEle)
-		end,
-		wordWrap = function(dgsEle,key,value,oldValue)
-			if value then
-				dgsMemoRebuildWordWrapMapTable(dgsEle)
-			end
-		end,
-	},
-	["dgs-dxprogressbar"] = {
-		progress = function(dgsEle,key,value,oldValue)
-			triggerEvent("onDgsProgressBarChange",dgsEle,value,oldValue)
-		end
-	},
-	["dgs-dx3dinterface"] = {
-		size = function(dgsEle,key,value,oldValue)
-			local temprt = dgsElementData[dgsEle].renderTarget
-			if isElement(temprt) then
-				destroyElement(temprt)
-			end
-			local renderTarget = dxCreateRenderTarget(value[1],value[2],true)
-			dgsSetData(dgsEle,"renderTarget",renderTarget)
-		end
-	},
-	["dgs-dxscalepane"] = {
-		scrollBarThick = function(dgsEle,key,value,oldValue)
-			configScalePane(dgsEle)
-		end,
-		scrollBarState = function(dgsEle,key,value,oldValue)
-			configScalePane(dgsEle)
-		end,
-		scrollBarOffset = function(dgsEle,key,value,oldValue)
-			configScalePane(dgsEle)
-		end,
-		scrollBarLength = function(dgsEle,key,value,oldValue)
-			configScalePane(dgsEle)
-		end,
-		scale = function(dgsEle,key,value,oldValue)
-			configScalePane(dgsEle)
-		end,
-	},
+dgsOnPropertyChange = {
 	["default"] = {
 		text = function(dgsEle,key,value,oldValue)
 			if type(value) == "table" then
@@ -642,6 +468,16 @@ local dgsDataFunctions = {
 			end
 			dgsElementData[dgsEle].text = tostring(value)
 			triggerEvent("onDgsTextChange",dgsEle)
+		end,
+		font = function(dgsEle,key,value,oldValue)
+			--Multilingual
+			if type(value) == "table" then
+				dgsElementData[dgsEle]._translationFont = value
+				value = dgsGetTranslationFont(dgsEle,value,sourceResource)
+			else
+				dgsElementData[dgsEle]._translationFont = nil
+			end
+			dgsElementData[dgsEle].font = value
 		end,
 		caption = function(dgsEle,key,value,oldValue)
 			if type(value) == "table" then
@@ -667,47 +503,272 @@ local dgsDataFunctions = {
 			end
 		end,
 		asPlugin = function(dgsEle,key,value,oldValue)
-			dgsAddType(value,true)
+			dgsRegisterPluginType(value)
 		end,
 	},
 }
+--------------Edit/Memo Blur Check
+function GlobalEditMemoBlurCheck()
+	local dxChild = source == GlobalEdit and dgsElementData[source].linkedDxEdit or dgsElementData[source].linkedDxMemo
+	if isElement(dxChild) and MouseData.focused == dxChild then
+		dgsBlur(dxChild,true)
+	end
+end
+
+--[[
+{}: table with item checked
+1:nil
+2:number
+4:bool
+8.string
+16.table without item checked
+32.font
+64.material
+128.color
+]]
+PArg = {
+	"Nil",
+	"Number",
+	"Bool",
+	"String",
+	"Table",
+	"Font",
+	"Material",
+	"Color",
+	"Text",
+}
+for i=1,#PArg do
+	PArg[ PArg[i] ] = 2^(i-1)
+end
+
+function dgsRegisterProperty(eleType,propertyName,propertyArgTemplate)
+	if not(type(eleType) == "string") then error(dgsGenAsrt(eleType,"dgsRegisterProperty",1,"string")) end
+	if not(type(propertyName) == "string") then error(dgsGenAsrt(propertyName,"dgsRegisterProperty",2,"string")) end
+	if not(type(propertyArgTemplate) == "table") then error(dgsGenAsrt(propertyArgTemplate,"dgsRegisterProperty",3,"table")) end
+	if _G[eleType] then
+		for eleType in pairs(_G[eleType]) do
+			dgsRegisterProperty(eleType,propertyName,propertyArgTemplate)
+		end
+	else
+		if not dgsElementPropertyList[eleType] then dgsElementPropertyList[eleType] = {} end
+		dgsElementPropertyList[eleType][propertyName] = propertyArgTemplate
+	end
+	return true
+end
+
+function dgsRegisterProperties(eleType,propertyList)
+	if not(type(eleType) == "string") then error(dgsGenAsrt(eleType,"dgsRegisterProperties",1,"string")) end
+	if not(type(propertyList) == "table") then error(dgsGenAsrt(propertyList,"dgsRegisterProperties",2,"table")) end
+	if _G[eleType] then
+		for eleType in pairs(_G[eleType]) do
+			dgsRegisterProperties(eleType,propertyList)
+		end
+	else
+		if not dgsElementPropertyList[eleType] then dgsElementPropertyList[eleType] = {} end
+		for propertyName,propertyArgTemplate in pairs(propertyList) do
+			dgsElementPropertyList[eleType][propertyName] = propertyArgTemplate
+		end
+	end
+	return true
+end
+
+function dgsListPropertyTypes(propertyTemplateValue)
+	if type(propertyTemplateValue) ~= "number" then return type(propertyTemplateValue) end
+	local pTypeList = {}
+	local index = 0
+	while(propertyTemplateValue ~= 0) do
+		index = index+1
+		local pType = propertyTemplateValue%2
+		propertyTemplateValue = math.floor(propertyTemplateValue/2)
+		if pType == 1 then
+			pTypeList[#pTypeList+1] = PArg[index]
+		end
+	end
+	return pTypeList
+end
+
+function dgsCheckPropertyByTemplate(propertyTemplate,propretyValue)
+	-- todo
+end
+
+function dgsCheckProperty(dgsElement,propertyName,propertyValue)
+	local eleType = dgsElementType[dgsElement]
+	local propertyCheck = dgsElementPropertyList[eleType]
+	if not propertyCheck then return true end
+	if propertyCheck[propertyName] then
+		return dgsCheckPropertyByTemplate(propertyCheck[propertyName],propertyValue)
+	else
+		local specialProperties = propertyCheck.__Special
+		if not propertyCheck.__Special then return true end
+		for i=1,#specialProperties do
+			local specialProperty = specialProperties[i]
+			local basis = specialProperty.__Basis
+			if basis then
+				local basisData = dgsElementData[eleType][basis]
+				if basisData then
+					if specialProperty[basisData] then
+						return dgsCheckPropertyByTemplate(specialProperty[basisData][propertyName],propertyValue)
+					end
+				end
+			end
+		end
+	end
+	return true
+end
+
+function dgsGetRegisteredProperties(eleType,withArgTemplate)
+	if not(type(eleType) == "string") then error(dgsGenAsrt(eleType,"dgsGetRegisteredProperties",1,"string")) end
+	if not dgsElementPropertyList[eleType] then return false end
+	if withArgTemplate then
+		return dgsElementPropertyList[eleType]
+	else
+		local propertyList = {}
+		for propType in pairs(dgsElementPropertyList[eleType]) do
+			propertyList[#propertyList+1] = propType
+		end
+		return propertyList
+	end
+end
 
 function dgsGetData(dgsEle,key)
 	return dgsElementData[dgsEle] and dgsElementData[dgsEle][key] or false
 end
 
 function dgsSetData(dgsEle,key,value,nocheck)
-	local dgsType,key = dgsElementType[dgsEle] or "",key or ""
-	if not (isElement(dgsEle) and dgsType) then return false end
+	local dgsType = dgsGetType(dgsEle)
+	if not (isElement(dgsEle) and dgsType and key) then return false end
 	if not dgsElementData[dgsEle] then dgsElementData[dgsEle] = {} end
 	local eleData = dgsElementData[dgsEle]
 	local oldValue = eleData[key]
 	if oldValue == value then return true end
 	eleData[key] = value
 	if nocheck then return true end
-	local dataHandlerList = dgsDataFunctions[dgsType] or dgsDataFunctions.default
-	local dataHandler = dataHandlerList[key] or dgsDataFunctions.default[key]
+	local dataHandlerList = dgsOnPropertyChange[dgsType] or dgsOnPropertyChange.default
+	local dataHandler = dataHandlerList[key] or dgsOnPropertyChange.default[key]
 	if dataHandler then dataHandler(dgsEle,key,value,oldValue) end
+	if eleData.propertyListener and eleData.propertyListener[key] then triggerEvent("onDgsPropertyChange",dgsEle,key,value,oldValue) end
 	return true
 end
 
-local compatibility = {}
-function checkCompatibility(dgsEle,key)
-	local eleTyp = dgsGetType(dgsEle)
-	if compatibility[eleTyp] then
-		for k,v in pairs(compatibility[eleTyp]) do
-			if key == k then
-				if not getElementData(localPlayer,"DGS-DEBUG-C") then
-					outputDebugString("Deprecated property '"..k.."' @dgsSetProperty with "..eleTyp..". To fix, run it again with command /debugdgs c",2)
-					return true
-				else
-					outputDebugString("Found deprecated property '"..k.."' @dgsSetProperty with "..eleTyp..", replace with "..v,2)
-					return false
-				end
+function dgsAddPropertyListener(dgsEle,propertyNames)
+	local isTable = type(dgsEle) == "table"
+	if not(dgsIsType(dgsEle) or isTable) then error(dgsGenAsrt(dgsEle,"dgsAddPropertyListener",1,"dgs-dxelement/table")) end
+	if isTable then
+		for i=1,#dgsEle do
+			dgsAddPropertyListener(dgsEle[i],propertyNames)
+		end
+		return true
+	else
+		local eleData = dgsElementData[dgsEle]
+		eleData.propertyListener = eleData.propertyListener or {}
+		if type(propertyNames) == "table" then
+			for i=1,#propertyNames do
+				eleData.propertyListener[propertyNames[i]] = true
 			end
+		else
+			eleData.propertyListener[propertyNames] = true
 		end
 	end
-	return true
+end
+
+function dgsRemovePropertyListener(dgsEle,propertyNames)
+	local isTable = type(dgsEle) == "table"
+	if not(dgsIsType(dgsEle) or isTable) then error(dgsGenAsrt(dgsEle,"dgsRemovePropertyListener",1,"dgs-dxelement/table")) end
+	if isTable then
+		for i=1,#dgsEle do
+			dgsRemovePropertyListener(dgsEle[i],propertyNames)
+		end
+		return true
+	else
+		local eleData = dgsElementData[dgsEle]
+		eleData.propertyListener = eleData.propertyListener or {}
+		if type(propertyNames) == "table" then
+			for i=1,#propertyNames do
+				eleData.propertyListener[propertyNames[i]] = false
+			end
+		else
+			eleData.propertyListener[propertyNames] = false
+		end
+	end
+end
+
+function dgsGetListeningProperties(dgsEle)
+	if not(dgsIsType(dgsEle)) then error(dgsGenAsrt(dgsEle,"dgsGetListeningProperties",1,"dgs-dxelement")) end
+	local eleData = dgsElementData[dgsEle]
+	eleData.propertyListener = eleData.propertyListener or {}
+	local listening = {}
+	for k,v in pairs(eleData.propertyListener) do
+		listening[#listening+1] = k
+	end
+	return listening
+end
+
+local compatibility = {
+	1,
+	["dgs-dxprogressbar"] = {
+		isReverse = "isClockWise",
+	},
+	["dgs-scrollbar"] = {
+		position = "scrollPosition",
+	},
+	["dgs-dx3dinterface"] = {
+		rotation = "roll",
+	},
+	["dgs-dxedit"] = {
+		placeHolderColorcoded = "placeHolderColorCoded",
+	},
+	["dgs-dxcheckbox"] = {
+		image_f = "imageUnchecked",
+		image_t = "imageChecked",
+		image_i = "imageIndeterminate",
+		color_f = "colorUnchecked",
+		color_t = "colorChecked",
+		color_i = "colorIndeterminate",
+	},
+	["dgs-dxradiobutton"] = {
+		image_f = "imageUnchecked",
+		image_t = "imageChecked",
+		color_f = "colorUnchecked",
+		color_t = "colorChecked",
+	},
+	hitoutofparent = "childOutsideHit",
+	wordbreak = "wordBreak",
+	colorcoded = "colorCoded",
+}
+function checkCompatibility(dgsEle,key,sResRoot)
+	local eleTyp = dgsGetType(dgsEle)
+	if getElementData(resourceRoot,"DGS-disableCompatibilityCheck") then return (compatibility[eleTyp] and compatibility[eleTyp][key]) or compatibility[key] or key end
+	if compatibility[eleTyp] and compatibility[eleTyp][key] then
+		if not getElementData(localPlayer,"DGS-DEBUG-C") then
+			outputDebugString("[DGS]Deprecated property '"..key.."' @dgsSetProperty with "..eleTyp..", replace with '"..compatibility[eleTyp][key].."'. See information below, or run again with command /debugdgs c",4,254,128,0)
+			if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+				triggerEvent("DGSI_onDebug",sResRoot,"PropertyCompatibility",key,compatibility[eleTyp][key])
+			end
+			return compatibility[eleTyp][key]
+		else
+			if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+				triggerEvent("DGSI_onDebug",sResRoot,"PropertyCompatibility",key,compatibility[eleTyp][key])
+			end
+			outputDebugString("Found deprecated '"..key.."' @dgsSetProperty with "..eleTyp..", replace with "..compatibility[eleTyp][key],2)
+			return false
+		end
+	end
+	if compatibility[key] then
+		if not getElementData(localPlayer,"DGS-DEBUG-C") then
+			outputDebugString("[DGS]Deprecated property '"..key.."' @dgsSetProperty with all dgs elements, replace with '"..compatibility[key].."'. See information below, or run again with command /debugdgs c",4,254,128,0)
+			if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+				triggerEvent("DGSI_onDebug",sResRoot,"PropertyCompatibility",key,compatibility[key])
+			end
+			return compatibility[key]
+		else
+			if getElementData(localPlayer,"DGS-DEBUG") == 3 then
+				triggerEvent("DGSI_onDebug",sResRoot,"PropertyCompatibility",key,compatibility[key])
+			end
+			outputDebugString("Found deprecated property '"..key.."' @dgsSetProperty with all dgs elements, replace with "..compatibility[key],2)
+			return false
+		end
+	end
+	return key
 end
 
 local _dgsSetData = dgsSetData
@@ -720,32 +781,35 @@ function dgsSetProperty(dgsEle,key,value,...)
 		end
 		return true
 	else
-		if #compatibility == 0 or checkCompatibility(dgsEle,key) then
-			if key == "functions" then
-				if value then
-					local fnc,err
-					if type(value) == "function" then
-						fnc = value
-					else
-						fnc,err = loadstring(value)
-						dgsElementData[dgsEle].functions_string = {value,{...}}
-					end
-					if not fnc then error("Bad argument @dgsSetProperty at argument 2, failed to load function ("..err..")") end
-					value = {fnc,{...}}
-				end
-			elseif key == "absPos" then
-				dgsSetPosition(dgsEle,value[1],value[2],false)
-			elseif key == "rltPos" then
-				dgsSetPosition(dgsEle,value[1],value[2],true)
-			elseif key == "absSize" then
-				dgsSetSize(dgsEle,value[1],value[2],false)
-			elseif key == "rltSize" then
-				dgsSetSize(dgsEle,value[1],value[2],true)
+		if #compatibility ~= 0 then
+			local newKey = checkCompatibility(dgsEle,key,sourceResourceRoot or resourceRoot)
+			if newKey == false then
+				error("DGS Compatibility Check")
 			end
-			return _dgsSetData(dgsEle,key,value)
-		else
-			error("DGS Compatibility Check")
+			key = newKey
 		end
+		if key == "functions" then
+			if value then
+				local fnc,err
+				if type(value) == "function" then
+					fnc = value
+				else
+					fnc,err = loadstring(value)
+					dgsElementData[dgsEle].functions_string = {value,{...}}
+				end
+				if not fnc then error("Bad argument @dgsSetProperty at argument 2, failed to load function ("..err..")") end
+				value = {fnc,{...}}
+			end
+		elseif key == "absPos" then
+			dgsSetPosition(dgsEle,value[1],value[2],false)
+		elseif key == "rltPos" then
+			dgsSetPosition(dgsEle,value[1],value[2],true)
+		elseif key == "absSize" then
+			dgsSetSize(dgsEle,value[1],value[2],false)
+		elseif key == "rltSize" then
+			dgsSetSize(dgsEle,value[1],value[2],true)
+		end
+		return _dgsSetData(dgsEle,key,value)
 	end
 end
 
@@ -765,7 +829,7 @@ function dgsSetProperties(dgsEle,theTable)
 			dgsSetProperty(dgsEle,key,value)
 		end
 	end
-	return success
+	return true
 end
 
 function dgsGetProperties(dgsEle,properties)
@@ -801,15 +865,14 @@ boundResource = {}
 dgsEasingFunction = {}
 dgsEasingFunctionOrg = {}
 SEInterface = [[
-local args = {...};
-local progress,setting,self = args[1],args[2],args[3];
-local propertyTable = dgsElementData[self];
+local progress,setting,self = ...
+local propertyTable = dgsElementData[self]
 ]]
-function dgsAddEasingFunction(name,str)
+function dgsAddEasingFunction(name,str,isOverWrite)
 	if not(type(name) == "string") then error(dgsGenAsrt(name,"dgsAddEasingFunction",1,"string")) end
 	if not(type(str) == "string") then error(dgsGenAsrt(str,"dgsAddEasingFunction",2,"string")) end
 	if easingBuiltIn[name] then error(dgsGenAsrt(name,"dgsAddEasingFunction",1,_,_,"duplicated name with built-in easing function ("..name..")")) end
-	if dgsEasingFunction[name] then error(dgsGenAsrt(name,"dgsAddEasingFunction",1,_,_,"this name has been used ("..name..")")) end
+	if not isOverWrite and dgsEasingFunction[name] then error(dgsGenAsrt(name,"dgsAddEasingFunction",1,_,_,"this name has been used ("..name..")")) end
 	local str = SEInterface..str
 	local fnc,err = loadstring(str)
 	if not fnc then error(dgsGenAsrt(fnc,"dgsAddEasingFunction",2,_,_,_,"Failed to load function:"..err)) end
@@ -832,9 +895,6 @@ function dgsEasingFunctionExists(name)
 	if not(type(name) == "string") then error(dgsGenAsrt(name,"dgsEasingFunctionExists",1,"string")) end
 	return easingBuiltIn[name] or (dgsEasingFunction[name] and true)
 end
-
-------------------------Animations Define
-animGUIList,moveGUIList,sizeGUIList,alphaGUIList = {},{},{},{}
 
 ------------------------DGS Property Saver
 dgsElementKeeper = {}
@@ -876,17 +936,8 @@ function DGSI_SaveData()
 		world3d=dgsWorld3DTable,
 		screen3d=dgsScreen3DTable,
 	},false)
-	setElementData(root,"DGSI_ParentChildData",{
-		parent=FatherTable,
-		child=ChildrenTable,
-	},false)
 	--Animations
-	setElementData(root,"DGSI_Animations",{
-		anim=animGUIList,
-		move=moveGUIList,
-		size=sizeGUIList,
-		alpha=alphaGUIList,
-	},false)
+	setElementData(root,"DGSI_Animations",animQueue,false)
 	--Others
 	setElementData(root,"DGSI_SaveData",true,false)
 end
@@ -928,32 +979,35 @@ function DGSI_ReadData()
 		--Properties
 		local _dgsElementData = getElementData(root,"DGSI_Properties") or {}
 		for dgsElement,data in pairs(_dgsElementData) do
-			if not isElement(dgsElement) then _dgsElementData[dgsElement] = nil end
-			if data.functions_string then
-				local fnc = loadstring(data.functions_string[1])
-				data.functions = {fnc,data.functions_string[2]}
-			end
-			if data.eventHandlers then
-				local eventHandlers = data.eventHandlers
-				for eventName,fncs in pairs(eventHandlers) do
-					for fncName,datas in pairs(fncs) do
-						if not addEventHandler(eventName,dgsElement,_G[fncName],datas[2],datas[3]) then
-							fncs[fncName] = nil
+			if not isElement(dgsElement) then
+				_dgsElementData[dgsElement] = nil
+			else
+				if data.functions_string then
+					local fnc = loadstring(data.functions_string[1])
+					data.functions = {fnc,data.functions_string[2]}
+				end
+				if data.eventHandlers then
+					local eventHandlers = data.eventHandlers
+					for eventName,fncs in pairs(eventHandlers) do
+						for fncName,datas in pairs(fncs) do
+							if not addEventHandler(eventName,dgsElement,_G[fncName],datas[2],datas[3]) then
+								fncs[fncName] = nil
+							end
 						end
 					end
 				end
-			end
-			for key,value in pairs(data) do
-				local dataType = type(value)
-				if dataType == "table" then
-					for i,e in pairs(value) do
-						local eType = type(e)
-						if eType == "userdata" and not isElement(e) then
-							value[i] = DGSI_AllocateDxElement(e,oldDgsElementLogger)
+				for key,value in pairs(data) do
+					local dataType = type(value)
+					if dataType == "table" then
+						for i,e in pairs(value) do
+							local eType = type(e)
+							if eType == "userdata" and not isElement(e) then
+								value[i] = DGSI_AllocateDxElement(e,oldDgsElementLogger)
+							end
 						end
+					elseif dataType == "userdata" and not isElement(value) then
+						data[key] = DGSI_AllocateDxElement(value,oldDgsElementLogger)
 					end
-				elseif dataType == "userdata" and not isElement(value) then
-					data[key] = DGSI_AllocateDxElement(value,oldDgsElementLogger)
 				end
 			end
 		end
@@ -1035,23 +1089,8 @@ function DGSI_ReadData()
 		dgsScreen3DTable = table.merger(dgsScreen3DTable,_dgsScreen3DTable)
 		removeElementData(root,"DGSI_LayerData")
 		
-		local pcData = getElementData(root,"DGSI_ParentChildData") or {}
-		FatherTable = pcData.parent
-		ChildrenTable = pcData.child
-		for dgsElement,data in pairs(FatherTable) do
-			if not isElement(dgsElement) then FatherTable[dgsElement] = nil end
-		end
-		for dgsElement,data in pairs(ChildrenTable) do
-			if not isElement(dgsElement) then ChildrenTable[dgsElement] = nil end
-		end
-		removeElementData(root,"DGSI_ParentChildData")
-		
 		--Animations
-		local animData = getElementData(root,"DGSI_Animations") or {}
-		animGUIList = animData.anim
-		moveGUIList = animData.move
-		sizeGUIList = animData.size
-		alphaGUIList = animData.alpha
+		animQueue = getElementData(root,"DGSI_Animations") or {}
 		removeElementData(root,"DGSI_Animations")
 	end
 	--Others
@@ -1070,13 +1109,11 @@ addEventHandler("onClientResourceStop",resourceRoot,function()
 	end,false)
 end,false)
 
-addEventHandler("onClientResourceStart",resourceRoot,function()
-	DGSI_ReadData()
-end,false)
+addEventHandler("onClientResourceStart",resourceRoot,DGSI_ReadData,false)
 
 addEventHandler("onClientResourceStop",root,function(res)
 	if boundResource[res] then
-		dgsClear(_,res)
+		dgsClear(nil,res)
 		resourceTranslation[res] = nil
 	end
 	externalElementPool[res] = nil	--Clear external element pool
@@ -1094,3 +1131,6 @@ addEventHandler("onClientResourceStop",root,function(res)
 		end
 	end
 end)
+---
+dgsRegisterDeprecatedFunction("dgsGetDxGUINoParent","dgsGetElementsInLayer")
+dgsRegisterDeprecatedFunction("dgsGetDxGUIFromResource","dgsGetElementsFromResource")

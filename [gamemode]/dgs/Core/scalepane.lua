@@ -1,5 +1,8 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxscalepane","dgsBasic","dgsType2D")
 --Dx Functions
-local dxDrawImage = dxDrawImageExt
+local dxDrawImage = dxDrawImage
+local dxDrawImageSection = dxDrawImageSection
 local dxDrawRectangle = dxDrawRectangle
 local dxSetShaderValue = dxSetShaderValue
 local dxSetRenderTarget = dxSetRenderTarget
@@ -30,6 +33,7 @@ local mathLerp = math.lerp
 local mathClamp = math.restrict
 
 function dgsCreateScalePane(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,relative,parent
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -50,9 +54,8 @@ function dgsCreateScalePane(...)
 	if not(type(h) == "number") then error(dgsGenAsrt(h,"dgsCreateScalePane",4,"number")) end
 	local scalepane = createElement("dgs-dxscalepane")
 	dgsSetType(scalepane,"dgs-dxscalepane")
-	dgsSetParent(scalepane,parent,true,true)
 	
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
@@ -78,6 +81,7 @@ function dgsCreateScalePane(...)
 		bgImage = false,
 		sourceTexture = false,
 	}
+	dgsSetParent(scalepane,parent,true,true)
 	calculateGuiPositionSize(scalepane,x,y,relative or false,w,h,relative or false,true)
 	local sx,sy = dgsElementData[scalepane].absSize[1],dgsElementData[scalepane].absSize[2]
 	local x,y = dgsElementData[scalepane].absPos[1],dgsElementData[scalepane].absPos[2]
@@ -107,8 +111,8 @@ function dgsCreateScalePane(...)
 	dgsSetData(scalepane,"scrollbars",{scrollbar1,scrollbar2})
 	dgsSetData(scrollbar1,"attachedToParent",scalepane)
 	dgsSetData(scrollbar2,"attachedToParent",scalepane)
-	dgsSetData(scrollbar1,"hitoutofparent",true)
-	dgsSetData(scrollbar2,"hitoutofparent",true)
+	dgsSetData(scrollbar1,"childOutsideHit",true)
+	dgsSetData(scrollbar2,"childOutsideHit",true)
 	dgsSetData(scrollbar1,"scrollType","Vertical")
 	dgsSetData(scrollbar2,"scrollType","Horizontal")
 	dgsSetData(scrollbar1,"length",{0,true})
@@ -120,7 +124,7 @@ function dgsCreateScalePane(...)
 	dgsAddEventHandler("onDgsElementScroll",scrollbar1,"checkScalePaneScrollBar",false)
 	dgsAddEventHandler("onDgsElementScroll",scrollbar2,"checkScalePaneScrollBar",false)
 	configScalePane(scalepane)
-	triggerEvent("onDgsCreate",scalepane,sourceResource)
+	triggerEvent("onDgsCreate",scalepane,sRes)
 	return scalepane
 end
 
@@ -179,8 +183,8 @@ function configScalePane(scalepane)
 	dgsSetPosition(scrollbar[2],x,y+sy-scbThick,false)
 	dgsSetSize(scrollbar[1],scbThick,relSizY,false)
 	dgsSetSize(scrollbar[2],relSizX,scbThick,false)
-	local scroll1 = dgsElementData[scrollbar[1]].position
-	local scroll2 = dgsElementData[scrollbar[2]].position
+	local scroll1 = dgsElementData[scrollbar[1]].scrollPosition
+	local scroll2 = dgsElementData[scrollbar[2]].scrollPosition
 	local lengthVertical = relSizY/scaleBoundingY
 	local lengthHorizontal = relSizX/scaleBoundingX
 	lengthVertical = lengthVertical < 1 and lengthVertical or 1
@@ -306,6 +310,27 @@ function dgsScalePaneGetScrollBarState(scalepane)
 	if not dgsIsType(scalepane,"dgs-dxscalepane") then error(dgsGenAsrt(scalepane,"dgsScalePaneSetScrollBarState",1,"dgs-dxscalepane")) end
 	return dgsElementData[scalepane].scrollBarState[1],dgsElementData[scalepane].scrollBarState[2]
 end
+
+----------------------------------------------------------------
+-----------------------PropertyListener-------------------------
+----------------------------------------------------------------
+dgsOnPropertyChange["dgs-dxscalepane"] = {
+	scrollBarThick = function(dgsEle,key,value,oldValue)
+		configScalePane(dgsEle)
+	end,
+	scrollBarState = function(dgsEle,key,value,oldValue)
+		configScalePane(dgsEle)
+	end,
+	scrollBarOffset = function(dgsEle,key,value,oldValue)
+		configScalePane(dgsEle)
+	end,
+	scrollBarLength = function(dgsEle,key,value,oldValue)
+		configScalePane(dgsEle)
+	end,
+	scale = function(dgsEle,key,value,oldValue)
+		configScalePane(dgsEle)
+	end,
+}
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
@@ -325,8 +350,8 @@ dgsRenderer["dgs-dxscalepane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 	local relSizX,relSizY = w-xthick,h-ythick
 	local resolX,resolY = resolution[1],resolution[2]
 	
-	local _xScroll = dgsElementData[scrollbar[2]].position*0.01
-	local _yScroll = dgsElementData[scrollbar[1]].position*0.01
+	local _xScroll = dgsElementData[scrollbar[2]].scrollPosition*0.01
+	local _yScroll = dgsElementData[scrollbar[1]].scrollPosition*0.01
 	local xMoveHardness = dgsElementData[ scrollbar[2] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
 	local yMoveHardness = dgsElementData[ scrollbar[1] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
 	local xScroll = mathLerp(xMoveHardness,eleData.horizontalMoveOffsetTemp,_xScroll)

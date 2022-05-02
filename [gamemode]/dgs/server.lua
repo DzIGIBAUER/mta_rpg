@@ -1,13 +1,16 @@
 ﻿-----------Config Loader
 dgsConfig = {}
-dgsConfig.updateCheck				= true		-- Enable:true;Disable:false
-dgsConfig.updateCheckInterval		= 120		-- Minutes
-dgsConfig.updateCheckNoticeInterval	= 120		-- Minutes
-dgsConfig.updateSystemDisabled		= false		-- Minutes
-dgsConfig.backupMeta				= true		-- Backup meta.xml
-dgsConfig.backupStyleMeta			= true		-- Backup style files meta index from meta.xml
-dgsConfig.g2d						= true		-- GUI To DGS command line
-dgsConfig.enableBuiltInCMD			= true		-- Enable DGS Built CMD /dgscmd
+dgsConfig.updateCheck					= true			-- Enable:true;Disable:false
+dgsConfig.updateCheckInterval			= 120			-- Minutes
+dgsConfig.updateCheckNoticeInterval		= 120			-- Minutes
+dgsConfig.updateSystemDisabled			= false			-- Disable update system
+dgsConfig.backupMeta					= true			-- Backup meta.xml
+dgsConfig.backupStyleMeta				= true			-- Backup style files meta index from meta.xml
+dgsConfig.g2d							= true			-- GUI To DGS command line
+dgsConfig.enableBuiltInCMD				= true			-- Enable DGS Built-in CMD /dgscmd
+dgsConfig.updateCommand					= "updatedgs"	-- Command of update dgs
+dgsConfig.enableTestFile				= true			-- Loads DGS Test File (If you want to save some bytes of memory, disable this by set to false)
+dgsConfig.disableCompatibilityCheck 	= false			-- Disable compatibility check warnings
 
 function loadConfig()
 	if fileExists("config.txt") then
@@ -27,6 +30,7 @@ function loadConfig()
 		end
 	end
 	setElementData(resourceRoot,"allowCMD",dgsConfig.enableBuiltInCMD)
+	setElementData(resourceRoot,"DGS-disableCompatibilityCheck",dgsConfig.disableCompatibilityCheck)
 	if dgsConfig.g2d then
 		outputDebugString("[DGS]G2D is enabled!")
 	end
@@ -82,32 +86,22 @@ function hashFile(fName)
 	return hash("sha256",fContent),fSize
 end
 
-addEvent("DGSI_AbnormalDetected",true)
-addEvent("DGSI_RequestFileInfo",true)
-DGSRecordedFiles = {}
 function verifyFile()
 	local xml = xmlLoadFile("meta.xml")
 	local children = xmlNodeGetChildren(xml)
+	local DGSRecordedFiles = {}
 	for index,child in ipairs(children) do
 		local nodeName = xmlNodeGetName(child)
-		if nodeName == "script" then
-			local typ = xmlNodeGetAttribute(child,"type") or "server"
-			if typ == "client" then
-				local src = xmlNodeGetAttribute(child,"src")
-				DGSRecordedFiles[src] = {hashFile(src)}
-			end
-		elseif nodeName == "file" then
+		if nodeName == "file" then
 			local src = xmlNodeGetAttribute(child,"src")
 			DGSRecordedFiles[src] = {hashFile(src)}
 		end
 	end
+	setElementData(resourceRoot,"DGSI_FileInfo",DGSRecordedFiles)
 end
 verifyFile()
 
-addEventHandler("DGSI_RequestFileInfo",root,function()
-	triggerClientEvent(client,"DGSI_ReceiveFileInfo",client,DGSRecordedFiles)
-end)
-
+addEvent("DGSI_AbnormalDetected",true)
 addEventHandler("DGSI_AbnormalDetected",root,function(fData)
 	local pName = getPlayerName(client)
 	for fName,fData in pairs(fData) do

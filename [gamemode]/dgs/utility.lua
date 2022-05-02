@@ -1,28 +1,123 @@
+dgsStartUpMemoryMonitor = {}
+function dgsLogLuaMemory()
+	collectgarbage()
+	local columns,rows = getPerformanceStats("Lua memory","",getResourceName(getThisResource()))
+	local debugInfo = debug.getinfo(2)
+	dgsStartUpMemoryMonitor[#dgsStartUpMemoryMonitor+1] = {debugInfo.short_src,rows[1][3]}
+	debugInfo = nil
+	columns = nil
+	rows = nil
+	collectgarbage()
+end
+--[[
+setTimer(function()
+	dgsLogLuaMemory()
+	for i=1,#dgsStartUpMemoryMonitor do
+		iprint(dgsStartUpMemoryMonitor[i])
+	end
+end,1000,1)]]
+
+dgsLogLuaMemory()
+--------------------------------Events
+events = {
+	"onDgsCursorTypeChange",
+	"onDgsMouseLeave",
+	"onDgsMouseEnter",
+	"onDgsMousePreClick",
+	"onDgsMouseWheel",
+	"onDgsMouseClick",
+	"onDgsMouseClickUp",
+	"onDgsMouseClickDown",
+	"onDgsMouseDoubleClick",
+	"onDgsMouseDoubleClickUp",
+	"onDgsMouseDoubleClickDown",
+	"onDgsMouseMultiClick",
+	"onDgsMouseDown",
+	"onDgsMouseUp",
+	"onDgsMouseDrag",
+	"onDgsMouseMove",
+	"onDgsWindowClose",
+	"onDgsPositionChange",
+	"onDgsSizeChange",
+	"onDgsTextChange",
+	"onDgsElementScroll",
+	"onDgsDestroy",
+	"onDgsSwitchButtonStateChange",
+	"onDgsSelectorSelect",
+	"onDgsGridListSelect",
+	"onDgsGridListHover",
+	"onDgsMouseHover",
+	"onDgsGridListItemDoubleClick",
+	"onDgsProgressBarChange",
+	"onDgsCreate",
+	"onDgsPluginCreate",
+	"onDgsPreRender",
+	"onDgsRender",
+	"onDgsElementRender",
+	"onDgsElementLeave",
+	"onDgsElementEnter",
+	"onDgsElementMove",
+	"onDgsElementSize",
+	"onDgsFocus",
+	"onDgsBlur",
+	"onDgsTabSelect",
+	"onDgsTabPanelTabSelect",
+	"onDgsRadioButtonChange",
+	"onDgsCheckBoxChange",
+	"onDgsComboBoxSelect",
+	"onDgsComboBoxStateChange",
+	"onDgsEditPreSwitch",
+	"onDgsEditSwitched",
+	"onDgsEditAccepted",
+	"onDgsStopMoving",
+	"onDgsStopSizing",
+	"onDgsStopAlphaing",
+	"onDgsStopAniming",
+	"onDgsDrop",
+	"onDgsDrag",
+	"onDgsStart",
+	"onDgsPaste", --DGS Paste Handler
+	"onDgsPropertyChange",
+	-------Plugin events
+	"onDgsRemoteImageLoad",
+	"onDgsQRCodeLoad",
+	-------internal events
+	"DGSI_Paste",
+	"DGSI_ReceiveIP",
+	"DGSI_SendAboutData",
+	"DGSI_ReceiveQRCode",
+	"DGSI_ReceiveRemoteImage",
+	"DGSI_onDebug",
+	"DGSI_onDebugRequestContext",
+	"DGSI_onDebugSendContext",
+	"DGSI_onImport",
+	-------G2D Hooker events
+    "onDgsEditAccepted-C",
+    "onDgsTextChange-C",
+    "onDgsComboBoxSelect-C",
+    "onDgsTabSelect-C",
+	-------
+}
+local addEvent = addEvent
+for i=1,#events do
+	addEvent(events[i],true)
+end
+events = nil
 local cos,sin,rad,atan2,deg = math.cos,math.sin,math.rad,math.atan2,math.deg
-local gsub,sub,len,find,format,byte = string.gsub,string.sub,string.len,string.find,string.format,byte
+local gsub,sub,len,find,format,byte,char = string.gsub,string.sub,string.len,string.find,string.format,string.byte,string.char
 local utf8Len,utf8Byte,utf8Sub = utf8.len,utf8.byte,utf8.sub
 local setmetatable,ipairs,pairs = setmetatable,ipairs,pairs
 local tableInsert = table.insert
 local tableRemove = table.remove
 local pi180 = math.pi/180
 sW,sH = guiGetScreenSize()
-_dxDrawImageSection = dxDrawImageSection
-_dxDrawImage = dxDrawImage
-_dxCreateTexture = dxCreateTexture
-_dxCreateShader = dxCreateShader
-_dxCreateFont = dxCreateFont
-_createElement = createElement
-_dxCreateRenderTarget = dxCreateRenderTarget
-__createElement = _createElement
-__dxCreateShader = _dxCreateShader
-__dxCreateFont = _dxCreateFont
-__dxCreateTexture = _dxCreateTexture
-__dxCreateRenderTarget = _dxCreateRenderTarget
+__createElement = createElement
+__dxCreateShader = dxCreateShader
+__dxCreateFont = dxCreateFont
+__dxCreateTexture = dxCreateTexture
+__dxCreateRenderTarget = dxCreateRenderTarget
 __dxDrawImageSection = dxDrawImageSection
 __dxDrawImage = dxDrawImage
-ClientInfo = {
-	SupportedPixelShader={}
-}
 dgs = exports[getResourceName(getThisResource())]
 
 -------Built-in DX Fonts
@@ -94,14 +189,21 @@ addCommandHandler("debugdgs",function(command,arg)
 	if not arg or arg == "1" then
 		debugMode = (not getElementData(localPlayer,"DGS-DEBUG") or arg == "1") and 1 or false
 		setElementData(localPlayer,"DGS-DEBUG",debugMode,false)
+		checkDisabledElement = false
 		outputChatBox("[DGS]Debug Mode "..(debugMode and "#00FF00Enabled" or "#FF0000Disabled"),255,255,255,true)
+		if not debugMode then
+			setElementData(localPlayer,"DGS-DEBUG-C",comp,false)
+		end
 	elseif arg == "2" then
 		debugMode = 2
 		setElementData(localPlayer,"DGS-DEBUG",2,false)
+		checkDisabledElement = false
 		outputChatBox("[DGS]Debug Mode "..(debugMode and "#00FF00Enabled ( Mode 2 )"),255,255,255,true)
 	elseif arg == "3" then
 		debugMode = 3
 		setElementData(localPlayer,"DGS-DEBUG",3,false)
+		setElementData(localPlayer,"DGS-DebugTracer",true,false)
+		checkDisabledElement = true
 		outputChatBox("[DGS]Debug Mode "..(debugMode and "#00FF00Enabled ( Mode 3 )"),255,255,255,true)
 	elseif arg == "c" then
 		local comp = not getElementData(localPlayer,"DGS-DEBUG-C")
@@ -111,6 +213,11 @@ addCommandHandler("debugdgs",function(command,arg)
 end)
 
 debugMode = getElementData(localPlayer,"DGS-DEBUG")
+checkDisabledElement = debugMode == 3
+
+function dgsSetDebugTracerEnabled(state)
+	return setElementData(localPlayer,"DGS-DebugTracer",state,false)
+end
 --------------------------------Element Utility
 --------Element Pool
 externalElementPool = {}
@@ -139,9 +246,21 @@ function dgsPopElement(eleType,sRes)
 	end
 end
 
+--Built in
+dgsMaterialType = {
+	texture = "texture",
+	shader = "shader",
+	svg = "texture",
+	["render-target-texture"] = "texture",
+}
+
+function DGSI_RegisterMaterialType(typeName,sort)
+	dgsMaterialType[typeName] = sort
+end
+
 function isMaterial(ele)
 	local eleType = dgsGetType(ele)
-	return eleType == "shader" or eleType == "texture" or eleType == "render-target-texture"
+	return dgsMaterialType[eleType] or false
 end
 
 dgsElementLogger = {}	--0:Empty texture 1:texture; 2:shader
@@ -149,13 +268,11 @@ dgsElementKeeper = {}
 function dxCreateEmptyTexture(width,height,sRes)
 	local texture
 	if sRes ~= false then	--Read the data instead of create from path, and create remotely
-		sourceResource = sRes or sourceResource
-		if dgsElementKeeper[sourceResource] then
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,"texture",width,height)
-			sourceResource = _sourceResource
-			texture = dgsPopElement("texture",sourceResource)
+		sRes = sRes or sourceResource
+		if dgsElementKeeper[sRes] then
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,"texture",width,height)
+			texture = dgsPopElement("texture",sRes)
 		end
 	end
 	if not texture then
@@ -173,14 +290,12 @@ end
 function dxCreateTexture(pathOrData,sRes)
 	local texture
 	if sRes ~= false then	--Read the data instead of create from path, and create remotely
-		sourceResource = sRes or sourceResource
-		if dgsElementKeeper[sourceResource] then
-			local textureData = fileGetContent(pathOrData)
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,"texture",textureData)
-			sourceResource = _sourceResource
-			texture = dgsPopElement("texture",sourceResource)
+		sRes = sRes or sourceResource
+		if dgsElementKeeper[sRes] then
+			local textureData = fileGetContent(pathOrData) or pathOrData
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,"texture",textureData)
+			texture = dgsPopElement("texture",sRes)
 		end
 	end
 	if not texture then
@@ -199,14 +314,12 @@ end
 function dxCreateShader(pathOrData,sRes)
 	local shader
 	if sRes ~= false then	--Read the data instead of create from path, and create remotely
-		sourceResource = sRes or sourceResource
-		if dgsElementKeeper[sourceResource] then
-			local shaderData = fileGetContent(pathOrData)
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,"shader",shaderData)
-			sourceResource = _sourceResource
-			shader = dgsPopElement("shader",sourceResource)
+		sRes = sRes or sourceResource
+		if dgsElementKeeper[sRes] then
+			local shaderData = fileGetContent(pathOrData) or pathOrData
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,"shader",shaderData)
+			shader = dgsPopElement("shader",sRes)
 		end
 	end
 	if not shader then
@@ -234,14 +347,11 @@ function dxCreateFont(creationInfo,sRes)
 		pathOrData,size,isbold,quality = creationInfo[1],creationInfo[2],creationInfo[3],creationInfo[4]
 	end
 	if sRes ~= false then	--Read the data instead of create from path, and create remotely
-		sourceResource = sRes or sourceResource
-		if dgsElementKeeper[sourceResource] then
-			local fontData = fileGetContent(pathOrData)
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,"font",fontData,size,isbold,quality)
-			sourceResource = _sourceResource
-			font = dgsPopElement("font",sourceResource)
+		sRes = sRes or sourceResource
+		if dgsElementKeeper[sRes] then
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,"font",pathOrData,size,isbold,quality)
+			font = dgsPopElement("font",sRes)
 		end
 	end
 	if not font then
@@ -260,13 +370,11 @@ end
 function dxCreateRenderTarget(w,h,isTransparent,dgsElement,sRes)
 	local rt
 	if sRes ~= false then	--Create remotely
-		sourceResource = sRes or sourceResource
-		if dgsElementKeeper[sourceResource] then
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,"rendertarget",w,h,isTransparent)
-			sourceResource = _sourceResource
-			rt = dgsPopElement("rendertarget",sourceResource)
+		sRes = sRes or sourceResource
+		if dgsElementKeeper[sRes] then
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,"rendertarget",w,h,isTransparent)
+			rt = dgsPopElement("rendertarget",sRes)
 		end
 	end
 	local rendertarget = rt or __dxCreateRenderTarget(w,h,isTransparent)
@@ -283,17 +391,16 @@ end
 
 function createElement(eleType,sRes)
 	local ele
-	sourceResource = sRes or sourceResource
-	if sourceResource then	--Create remotely
-		if dgsElementKeeper[sourceResource] then
-			local sourceResRoot = getResourceRootElement(sourceResource)
-			local _sourceResource = sourceResource
-			triggerEvent("onDgsRequestCreateRemoteElement",sourceResRoot,eleType)
-			sourceResource = _sourceResource
-			ele = dgsPopElement(eleType,sourceResource)
+	sRes = sRes or sourceResource
+	if sRes then	--Create remotely
+		if dgsElementKeeper[sRes] then
+			local sResRoot = getResourceRootElement(sRes)
+			triggerEvent("onDgsRequestCreateRemoteElement",sResRoot,eleType)
+			ele = dgsPopElement(eleType,sRes)
 		end
 	end
-	return ele or __createElement(eleType)
+	local ele = ele or __createElement(eleType)
+	return ele
 end
 
 function removeElementData(element,key)
@@ -313,7 +420,10 @@ function dgsAddEventHandler(eventName,element,fncName,...)
 end
 
 function dgsRemoveEventHandler(eventName,element,fncName)
-	eventHandlers[element][eventName][fncName] = nil	--Remove event handler
+	local eventHandlers = dgsElementData[element].eventHandlers
+	if not eventHandlers then return true end
+	if not eventHandlers[eventName] then return true end
+	eventHandlers[eventName][fncName] = nil	--Remove event handler
 	return removeEventHandler(eventName,element,_G[fncName])
 end
 --------------------------------Table Utility
@@ -419,23 +529,74 @@ function table.shallowCopy(obj)
 	return InTable
 end
 
+function table.getKeys(obj)
+	local newTable = {}
+	for k,v in pairs(obj) do
+		newTable[#newTable+1] = k
+	end
+	table.sort(newTable)
+	return newTable
+end
 --------------------------------File Utility
-function hashFile(fName)
+function hashFile(fName,exportContent)
 	local f = fileOpen(fName,true)
 	local fSize = fileGetSize(f)
 	local fContent = fileRead(f,fSize)
 	fileClose(f)
-	return hash("sha256",fContent),fSize
+	return hash("sha256",fContent),fSize,exportContent and fContent or nil
 end
 
 function fileGetContent(fName)
 	if not fileExists(fName) then return false end
-	local f = fileOpen(fName)
+	local f = fileOpen(fName,true)
 	local str = fileRead(f,fileGetSize(f))
 	fileClose(f)
 	return str
 end
+--[[
+streamer = setmetatable({
+		readPos = 0,
+		file = nil,
+	},{
+	__index = {
+		read = function(self,bits)
+			fileSetPos(self.file,self.readPos)
+			local str = fileRead(self.file,bits)
+			self.readPos = self.readPos+bits
+			return str
+		end,
+		getSize = function(self)
+			return fileGetSize(self.file)
+		end,
+		seek = function(self,op,bits)
+			if op == "set" then
+				fileSetPos(self.file,bits)
+				self.readPos = bits
+			elseif op == "cur" then
+				self.readPos = self.readPos+bits
+				fileSetPos(self.file,self.readPos)
+			elseif op == "end" then
+				self.readPos = fileGetSize(self.file)+bits
+				fileSetPos(self.file,self.readPos)
+			end
+			return true
+		end,
+		open = function(self,fName)
+			self.file = fileOpen(fName)
+		end,
+		close = function(self)
+			if self.file then fileClose(self.file) end
+		end,
+	}
+})]]
 --------------------------------String Utility
+--[[
+ASCIIBuffer = {}
+for i=0,255 do
+	ASCIIBuffer[char(i)] = i
+	ASCIIBuffer[i] = char(i)
+end]]
+
 function string.split(s,delim)
 	local delimLen = len(delim)
     if type(delim) ~= "string" or delimLen <= 0 then return false end
@@ -452,7 +613,7 @@ function string.split(s,delim)
 end
 
 function string.getPath(res,path)
-	if res and res ~= "global" then
+	if res and res ~= "global" and res ~= getThisResource() then
 		path = path:gsub("\\","/")
 		if not path:find(":") then
 			path = ":"..getResourceName(res).."/"..path
@@ -520,6 +681,21 @@ function findRotation(x1,y1,x2,y2,offsetFix)
 end
 
 function math.restrict(value,n_min,n_max)
+	if type(value) ~= "number" then
+		local dbInfo = debug.getinfo(2)
+		outputDebugString("WARNING: "..dbInfo.short_src..":"..dbInfo.currentline..": Bad argument @math.restrict at argument 1, expect a number, got "..type(value),4,255,128,0)
+		return false
+	end
+	if type(n_min) ~= "number" then
+		local dbInfo = debug.getinfo(2)
+		outputDebugString("WARNING: "..dbInfo.short_src..":"..dbInfo.currentline..": Bad argument @math.restrict at argument 2, expect a number, got "..type(n_min),4,255,128,0)
+		return false
+	end
+	if type(n_max) ~= "number" then
+		local dbInfo = debug.getinfo(2)
+		outputDebugString("WARNING: "..dbInfo.short_src..":"..dbInfo.currentline..": Bad argument @math.restrict at argument 3, expect a number, got "..type(n_max),4,255,128,0)
+		return false
+	end
 	if value <= n_min then
 		return n_min
 	elseif value >= n_max then
@@ -568,6 +744,31 @@ function math.getBezierPoint(pos,t)
 		retY = retY+factor*pos[i][2]
 	end
 	return retX,retY
+end
+
+function random(n, m)
+    math.randomseed(os.clock()*math.random(1000000,90000000)+math.random(1000000,90000000))
+    return math.random(n, m)
+end
+
+function randomNumber(len)
+    local rt = ""
+    for i=1,len,1 do
+        if i == 1 then
+            rt = rt..random(1,9)
+        else
+            rt = rt..random(0,9)
+        end
+    end
+    return rt
+end
+
+function randomLetter(len)
+    local rt = ""
+    for i = 1, len, 1 do
+        rt = rt..string.char(random(97,122))
+    end
+    return rt
 end
 
 function getPositionFromElementOffset(element,offX,offY,offZ)
@@ -693,10 +894,36 @@ function applyColorAlpha(color,alpha)
 	return rgb+a*0x1000000
 end
 
---If you are trying to edit following code...
---You should know that
---HSL and HSV are not the same thing,while HSB is the same as HSV...
+function interpolateColor(colorA,colorB,s) --From, To, Percent
+	local cAr,cAg,cAb,cAa
+	local cBr,cBg,cBb,cBa
+	local r,g,b,a
+	cAb = colorA%256
+	colorA = (colorA-cAb)/256
+	cAg = colorA%256
+	colorA = (colorA-cAg)/256
+	cAr = colorA%256
+	colorA = (colorA-cAr)/256
+	cAa = colorA%256
+	cBb = colorB%256
+	colorB = (colorB-cBb)/256
+	cBg = colorB%256
+	colorB = (colorB-cBg)/256
+	cBr = colorB%256
+	colorB = (colorB-cBr)/256
+	cBa = colorB%256
+	a = cAa+(cBa-cAa)*s
+	r = cAr+(cBr-cAr)*s
+	g = cAg+(cBg-cAg)*s
+	b = cAb+(cBb-cAb)*s
+	a = a-a%1
+	r = r-r%1
+	g = g-g%1
+	b = b-b%1
+	return a*0x1000000+r*0x10000+g*0x100+b
+end
 
+--HSL and HSV are not the same thing, while HSB is the same as HSV...
 function HSL2RGB(H,S,L)
 	local H,S,L = H/360,S/100,L/100
 	local R,G,B
@@ -826,41 +1053,75 @@ function dgsGenAsrt(x,funcName,argx,reqType,reqValueStr,appends,ends)
 	if #inspectV >= 24 then
 		inspectV = inspectV:sub(1,24).."..."
 	end
+	local argIndex = argx and (" at argument "..argx) or ""
 	local expected = reqType and " expected "..reqType..reqValue or ""
 	local got = reqType and " got "..dgsGetType(x).."("..inspectV..")" or ""
 	local ends = ends and (" "..ends) or ""
-	local argIndex = argx and (" at argument "..argx) or ""
 	local str = "Bad Argument @'"..funcName.."'"..appendInfo..expected..argIndex..","..got..ends
 	return str
 end
 --------------------------------Dx Utility
-function dxDrawImageExt(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
+dgsDrawType = nil
+function dxDrawImage(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
+	if image then
+		local dgsBasicType = dgsGetType(image)
+		if dgsBasicType == "table" then
+			__dxDrawImageSection(posX,posY,width,height,image[2],image[3],image[4],image[5],image[1],rotation,rotationX,rotationY,color,postGUI)
+		else
+			local pluginType = dgsGetPluginType(image)
+			if pluginType and dgsCustomTexture[pluginType] and not dgsElementData[image].disableCustomTexture then
+				dgsDrawType = "image"
+				dgsCustomTexture[pluginType](posX,posY,width,height,nil,nil,nil,nil,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
+			else
+				local blendMode
+				if isInRndTgt and dgsBasicType == "shader" then
+					blendMode = dxGetBlendMode()
+					dxSetBlendMode("modulate_add")
+				end
+				if not __dxDrawImage(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI) then
+					if debugMode then
+						local debugTrace = dgsElementData[self].debugTrace
+						local thisTrace = debug.getinfo(2)
+						if debugTrace then
+							local line,file = debugTrace.line,debugTrace.file
+							outputDebugString("dxDrawImage("..thisTrace.source..":"..thisTrace.currentline..") failed at element created at "..file..":"..line,2)
+						else
+							outputDebugString("dxDrawImage("..thisTrace.source..":"..thisTrace.currentline..") failed unable to trace",2)
+						end
+					end
+				end
+				if blendMode then dxSetBlendMode(blendMode) end
+			end
+		end
+	else
+		dxDrawRectangle(posX,posY,width,height,color,postGUI)
+	end
+	return true
+end
+
+function dxDrawImageSection(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
 	local dgsBasicType = dgsGetType(image)
-	if dgsBasicType == "table" then
-		__dxDrawImageSection(posX,posY,width,height,image[2],image[3],image[4],image[5],image[1],rotation,rotationX,rotationY,color,postGUI)
-	elseif dgsBasicType == "dgs-dxcustomrenderer" then
-		dgsElementData[image].customRenderer(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
+	if dgsBasicType == "dgs-dxcustomrenderer" then
+		return dgsElementData[image].customRenderer(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
 	else
 		local pluginType = dgsGetPluginType(image)
-		if pluginType == "dgs-dxcanvas" then
-			dgsCanvasRender(image)
-		elseif pluginType == "dgs-dxblurbox" then
-			__dxDrawImageSection(posX,posY,width,height,posX*blurboxFactor,posY*blurboxFactor,width*blurboxFactor,height*blurboxFactor,image,rotation,rotationX,rotationY,color,false)
+		if pluginType and dgsCustomTexture[pluginType] and not dgsElementData[image].disableCustomTexture then
+			dgsCustomTexture[pluginType](posX,posY,width,height,nil,nil,nil,nil,image,rotation,rotationX,rotationY,color,postGUI,isInRndTgt)
 		else
 			local blendMode
 			if isInRndTgt and dgsBasicType == "shader" then
 				blendMode = dxGetBlendMode()
-				dxSetBlendMode("blend")
+				dxSetBlendMode("modulate_add")
 			end
-			if not __dxDrawImage(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI) then
+			if not __dxDrawImageSection(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI) then
 				if debugMode then
 					local debugTrace = dgsElementData[self].debugTrace
 					local thisTrace = debug.getinfo(2)
 					if debugTrace then
 						local line,file = debugTrace.line,debugTrace.file
-						outputDebugString("dxDrawImage("..thisTrace.source..":"..thisTrace.currentline..") failed at element created at "..file..":"..line,2)
+						outputDebugString("↑Caused by dxDrawImageSection("..thisTrace.source..":"..thisTrace.currentline..") failed at the element ("..file..":"..line..")",4)
 					else
-						outputDebugString("dxDrawImage("..thisTrace.source..":"..thisTrace.currentline..") failed unable to trace",2)
+						outputDebugString("↑Caused by dxDrawImageSection("..thisTrace.source..":"..thisTrace.currentline..") failed unable to trace",4)
 					end
 				end
 			end
@@ -870,18 +1131,136 @@ function dxDrawImageExt(posX,posY,width,height,image,rotation,rotationX,rotation
 	return true
 end
 
-function dxDrawImageSectionExt(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI)
-	local dgsBasicType = dgsGetType(image)
-	if dgsBasicType == "dgs-dxcustomrenderer" then
-		return dgsElementData[image].customRenderer(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
-	else
-		if dgsGetPluginType(image) == "dgs-dxcanvas" then
-			dgsCanvasRender(image)
+function dgsDrawText(text,leftX,topY,rightX,bottomY,color,scaleX,scaleY,font,alignX,alignY,clip,wordBreak,postGUI,colorCoded,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing,shadowOffsetX,shadowOffsetY,shadowColor,shadowIsOutline,shadowFont)
+	if type(text) ~= "string" then
+		local pluginType = dgsGetPluginType(text)
+		if pluginType and dgsCustomTexture[pluginType] and not dgsElementData[text].disableCustomTexture then
+			dgsDrawType = "text"
+			return dgsCustomTexture[pluginType](text,leftX,topY,rightX,bottomY,color,scaleX,scaleY,font,alignX,alignY,clip,wordBreak,postGUI,colorCoded,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
 		end
-		return __dxDrawImageSection(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI)
 	end
+	if shadowOffsetX then
+		local shadowText = text
+		if colorCoded then
+			shadowText = shadowText:gsub("#%x%x%x%x%x%x","") or shadowText
+		end
+		shadowFont = shadowFont or font or "default"
+		if not shadowIsOutline or shadowIsOutline == 0 then
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY+shadowOffsetY,rightX+shadowOffsetX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+		elseif shadowIsOutline == true or shadowIsOutline == 1 then
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY+shadowOffsetY,rightX+shadowOffsetX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX-shadowOffsetX,topY+shadowOffsetY,rightX-shadowOffsetX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX-shadowOffsetX,topY-shadowOffsetY,rightX-shadowOffsetX,bottomY-shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY-shadowOffsetY,rightX+shadowOffsetX,bottomY-shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+		elseif shadowIsOutline == 2 then
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY+shadowOffsetY,rightX+shadowOffsetX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX-shadowOffsetX,topY+shadowOffsetY,rightX-shadowOffsetX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX-shadowOffsetX,topY-shadowOffsetY,rightX-shadowOffsetX,bottomY-shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY-shadowOffsetY,rightX+shadowOffsetX,bottomY-shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX,topY+shadowOffsetY,rightX,bottomY+shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX-shadowOffsetX,topY,rightX-shadowOffsetX,bottomY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX,topY-shadowOffsetY,rightX,bottomY-shadowOffsetY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+			dgsDrawText(shadowText,leftX+shadowOffsetX,topY,rightX+shadowOffsetX,bottomY,shadowColor,scaleX or 1,scaleY or 1,shadowFont,alignX or "left",alignY or "top",clip,wordBreak,postGUI,false,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing)
+		end
+	end
+	if not dxDrawText(text,leftX,topY,rightX,bottomY,color,scaleX or 1,scaleY or 1,font or "default",alignX or "left",alignY or "top",clip,wordBreak,postGUI,colorCoded,subPixelPositioning,fRot,fRotCenterX,fRotCenterY,flineSpacing) then
+		if debugMode then
+			local debugTrace = dgsElementData[self].debugTrace
+			local thisTrace = debug.getinfo(2)
+			if debugTrace then
+				local line,file = debugTrace.line,debugTrace.file
+				outputDebugString("↑Caused by dgsDrawText("..thisTrace.source..":"..thisTrace.currentline..") failed at the element("..file..":"..line..")",4,255,200,100)
+			else
+				outputDebugString("↑Caused by dgsDrawText("..thisTrace.source..":"..thisTrace.currentline..") failed unable to trace",4,255,140,50)
+			end
+		end
+		return false
+	end
+	return true
+end
+--[[
+function dgsCreateTextBuffer(text,leading,textSizeX,textSizeY,font,isColorCoded,isWordWrap,lineSpacing,tabSpacing)
+	local textTable = {}
+	local _h = 0
+	local tabSpacing = tabSpacing or 4
+	local tHei = lineSpacing or dxGetFontHeight(1,"default")
+	local lineStart = -1
+	local blockStart,_w,colorBlockStart
+	local color = 0xFFFFFFFF
+	while true do	--\n
+		local _n = text:find(_n,lineStart+2)
+		_n = _n and _n-1 or nil
+		local line = text:sub(lineStart+2,_n)
+		lineStart = _n
+		blockStart,_w = -1,0
+		textTable[#textTable+1] = {[0]=line}
+		local textTableLine = textTable[#textTable]
+		if line ~= "" then
+			while true do	--\t
+				local _t = line:find(_t,blockStart+2)
+				_t = _t and _t-1 or nil
+				local block = line:sub(blockStart+2,_t)
+				blockStart = _t
+				colorBlockStart = -7
+				if block ~= "" then
+					while true do	--#RRGGBB
+						local _c
+						if isColorCoded then
+							_c = block:find("#%x%x%x%x%x%x",colorBlockStart+8)
+						end
+						_c = _c and _c-1 or nil
+						local c
+						if _c then
+							c = "0xFF"..block:sub(_c+2,_c+7)
+						end
+						local cblock = block:sub(colorBlockStart+8,_c)
+						colorBlockStart = _c
+						textTableLine[#textTableLine+1] = {cblock,_w,_h,color}
+						_w = _w+dxGetTextWidth(cblock,1,"default")
+						color = c or color
+						if not _c then break end
+					end
+				end
+				_w = _w-_w%tabSpace+tabSpace
+				if not _t then break end
+			end
+		end
+		_h = _h+tHei+lineSpace
+		if not _n then break end
+	end
+	return textTable
+end]]
+--[[
+local richTextMeta = {
+	insert = function(text,isColorCoded,textSizeX,textSizeY,font)
+		while text do
+			
+		end
+	end,
+}
+function dgsCreateRichText(defaultTextSizeX,defaultTextSizeY,defaultFont,defaultColor)
+	return {
+		textSizeX = defaultTextSizeX or 1,
+		textSizeY = defaultTextSizeY or 1,
+		font = defaultFont or "default",
+		color = defaultColor or white,
+	}
 end
 
+function dgsDrawRichText(buffer,x,y)
+	for line=1,#buffer do
+		local l = buffer[line]
+		for index=1,#l do
+			local block = l[index]
+			local text,offx,offy,color = block[1],block[2],block[3],block[4]
+			dxDrawText(text,x+offx,y+offy,_,_,color)
+		end
+	end	
+end
+local rt = dgsCreateTextBuffer("123#FF0000123")
+addEventHandler("onClientRender",root,function()
+	dgsDrawRichText(rt,10,10)
+end)]]
 --------------------------------Other Utility
 function urlEncode(s)
     s = gsub(s,"([^%w%.%- ])",function(c)
@@ -950,32 +1329,7 @@ addEventHandler("onClientKey",root,function(but,state)
 end)
 
 --------------------------------Dx Utility
-PixelShaderCode = [[
-float4 main(float2 Tex : TEXCOORD0):COLOR0 {
-	return 0;
-}
-technique RepTexture {
-	pass P0 {
-		PixelShader = compile ps_&rep main();
-	}
-}
-]]
-PixShaderVersion = {"2_0","2_a","2_b","3_0"}
-function checkPixelShaderVersion()
-	for i,ver in ipairs(PixShaderVersion) do
-		local shaderCode = gsub(PixelShaderCode,"&rep",ver)
-		local shader = dxCreateShader(shaderCode)
-		if shader then
-			ClientInfo.SupportedPixelShader[ver] = true
-			destroyElement(shader)
-		else
-			ClientInfo.SupportedPixelShader[ver] = false
-		end
-	end
-end
-checkPixelShaderVersion()
-
---Render Target Assigner
+--Render Target Assigner [Project AI]
 --[[
 RTState:
 	state:
@@ -1047,81 +1401,65 @@ function dgsGetRTAssignState(element)
 	local RTState = dgsElementData[element].RTState or {state=0,RT=nil}
 	return RTState.state
 end]]
---------------------------------Events
-events = {
-	"onDgsCursorTypeChange",
-	"onDgsMouseLeave",
-	"onDgsMouseEnter",
-	"onDgsMousePreClick",
-	"onDgsMouseWheel",
-	"onDgsMouseClick",
-	"onDgsMouseClickUp",
-	"onDgsMouseClickDown",
-	"onDgsMouseDoubleClick",
-	"onDgsMouseDoubleClickUp",
-	"onDgsMouseDoubleClickDown",
-	"onDgsMouseMultiClick",
-	"onDgsMouseDown",
-	"onDgsMouseUp",
-	"onDgsMouseDrag",
-	"onDgsMouseMove",
-	"onDgsWindowClose",
-	"onDgsPositionChange",
-	"onDgsSizeChange",
-	"onDgsTextChange",
-	"onDgsElementScroll",
-	"onDgsDestroy",
-	"onDgsSwitchButtonStateChange",
-	"onDgsSelectorSelect",
-	"onDgsGridListSelect",
-	"onDgsGridListHover",
-	"onDgsGridListItemDoubleClick",
-	"onDgsProgressBarChange",
-	"onDgsCreate",
-	"onDgsPluginCreate",
-	"onDgsPreRender",
-	"onDgsRender",
-	"onDgsElementRender",
-	"onDgsElementLeave",
-	"onDgsElementEnter",
-	"onDgsElementMove",
-	"onDgsElementSize",
-	"onDgsFocus",
-	"onDgsBlur",
-	"onDgsTabSelect",
-	"onDgsTabPanelTabSelect",
-	"onDgsRadioButtonChange",
-	"onDgsCheckBoxChange",
-	"onDgsComboBoxSelect",
-	"onDgsComboBoxStateChange",
-	"onDgsEditPreSwitch",
-	"onDgsEditSwitched",
-	"onDgsEditAccepted",
-	"onDgsStopMoving",
-	"onDgsStopSizing",
-	"onDgsStopAlphaing",
-	"onDgsStopAniming",
-	"onDgsDrop",
-	"onDgsDrag",
-	"onDgsStart",
-	"onDgsPaste", --DGS Paste Handler
-	-------Plugin events
-	"onDgsRemoteImageLoad",
-	"onDgsQRCodeLoad",
-	-------internal events
-	"DGSI_Paste",
-	"DGSI_ReceiveIP",
-	"DGSI_SendAboutData",
-	"DGSI_ReceiveQRCode",
-	"DGSI_ReceiveRemoteImage",
-	-------G2D Hooker events
-    "onDgsEditAccepted-C",
-    "onDgsTextChange-C",
-    "onDgsComboBoxSelect-C",
-    "onDgsTabSelect-C",
-	-------
-}
-local addEvent = addEvent
-for i=1,#events do
-	addEvent(events[i],true)
+
+--------------------------------DEBUG
+local resourceDebugRegistered = {}
+local debugContextQueue = {}
+
+function onDGSRemoveImports()
+	resourceDebugRegistered[source] = false
 end
+
+function onDGSLogImports(resRoot)
+	resourceDebugRegistered[resRoot] = true
+	addEventHandler("onClientResourceStop",resRoot,onDGSRemoveImports,false)
+end
+addEventHandler("DGSI_onImport",root,onDGSLogImports)
+triggerEvent("DGSI_onImport",root,resourceRoot)
+
+function dgsDebugGetContext(resRoot,callBack)
+	if resourceDebugRegistered[resRoot] then
+		table.insert(debugContextQueue,{resRoot,callBack})
+		triggerEvent("DGSI_onDebugRequestContext",resRoot)
+		return true
+	end
+	return false
+end
+
+addEventHandler("DGSI_onDebugSendContext",root,function(context)
+	if #debugContextQueue > 0 then
+		debugContextQueue[1][2](context)
+		table.remove(debugContextQueue,1)
+	end
+end)
+
+-----------------------------SECURITY
+DGSFileVerify = false
+DGSFileInfo = getElementData(resourceRoot,"DGSI_FileInfo")
+function verifyFile(fName,exportContent)
+	if fileExists(fName) then
+		local _hash,_size,_content = hashFile(fName,exportContent)
+		local localFileInfo = {_hash,_size}
+		local targetFileInfo = DGSFileInfo[fName]
+		if localFileInfo[1] ~= targetFileInfo[1] or localFileInfo[2] ~= targetFileInfo[2] then
+			return false,localFileInfo
+		end
+		return true,_content
+	end
+	return true
+end
+
+function verifyFiles()
+	local mismatched = {}
+	for fName,fData in pairs(DGSFileInfo) do
+		local matched,fileInfo = verifyFile(fName)
+		if not matched then
+			mismatched[fName] = fileInfo
+		end
+	end
+	if table.count(mismatched) > 0 then
+		triggerServerEvent("DGSI_AbnormalDetected",localPlayer,mismatched)
+	end
+	setTimer(collectgarbage,1000,1)
+end
+addEventHandler("onDgsStart",resourceRoot,verifyFiles)

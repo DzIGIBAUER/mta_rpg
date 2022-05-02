@@ -37,11 +37,11 @@ local function notifikacija_animacija(element)
     
     dgsSetPosition(element, x, -h, true)
     
-    dgsMoveTo(element, x, y, true, false, "OutQuad", 250)
+    dgsMoveTo(element, x, y, true, "OutQuad", 250)
 
     setTimer(function() -- nakon sto prodje vreme_poruke sklanjamo notifikaciju
 
-        dgsMoveTo(element, x, -h, true, false, "OutQuad", 250)
+        dgsMoveTo(element, x, -h, true, "OutQuad", 250)
         
         setTimer(function() -- cekamo dok se notifikacija skloni i unistavamo je
             destroyElement(element)
@@ -67,7 +67,7 @@ local function prikazi_notifikaciju(tip, naslov, poruka)
     dgsSetProperty(window, "sizable", false)
 
     local label = dgsCreateLabel(0, 0, 1, 0.8, poruka, true, window, nil, nil, nil, nil, nil, nil, "center", "center")
-    dgsSetProperty(label, "wordbreak", true)
+    dgsSetProperty(label, "wordBreak", true)
 
     notifikacija_animacija(window)
 end

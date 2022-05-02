@@ -1,5 +1,15 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxscrollpane","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxscrollpane",{
+	bgColor = 			{	PArg.Color	},
+	bgImage = 			{	PArg.Material+PArg.Nil	},
+	moveHardness = 		{	{ PArg.Number,PArg.Number }	},
+	scrollBarThick = 	{	PArg.Number	},
+	scrollBarState = 	{	{ PArg.Bool+PArg.Nil, PArg.Bool+PArg.Nil }	},
+	scrollBarLength = 	{	{ { PArg.Number, PArg.Bool }, { PArg.Number, PArg.Bool } }, { PArg.Nil, PArg.Nil }	},
+})
 --Dx Functions
-local dxDrawImage = dxDrawImageExt
+local dxDrawImage = dxDrawImage
 local dxDrawRectangle = dxDrawRectangle
 local dxSetShaderValue = dxSetShaderValue
 local dxSetRenderTarget = dxSetRenderTarget
@@ -28,8 +38,11 @@ local tocolor = tocolor
 local type = type
 local mathLerp = math.lerp
 local mathClamp = math.restrict
+local mathAbs = math.abs
+local mathCeil = math.ceil
 
 function dgsCreateScrollPane(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,relative,parent
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -48,9 +61,8 @@ function dgsCreateScrollPane(...)
 	if not(type(h) == "number") then error(dgsGenAsrt(h,"dgsCreateScrollPane",4,"number")) end
 	local scrollpane = createElement("dgs-dxscrollpane")
 	dgsSetType(scrollpane,"dgs-dxscrollpane")
-	dgsSetParent(scrollpane,parent,true,true)
 	
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
@@ -64,8 +76,8 @@ function dgsCreateScrollPane(...)
 		scrollBarState = {nil,nil}, --true: force on; false: force off; nil: auto
 		scrollBarLength = {},
 		maxChildSize = {0,0},
-		horizontalMoveOffsetTemp = 0,
-		verticalMoveOffsetTemp = 0,
+		horizontalMoveOffset = 0,
+		verticalMoveOffset = 0,
 		moveHardness = {0.1,0.9},
 		childSizeRef = {{},{}}, --Horizontal,Vertical //to optimize
 		configNextFrame = false,
@@ -73,6 +85,7 @@ function dgsCreateScrollPane(...)
 		bgImage = false,
 		sourceTexture = false,
 	}
+	dgsSetParent(scrollpane,parent,true,true)
 	local renderTarget,err = dxCreateRenderTarget(w,h,true,scrollpane)
 	if renderTarget ~= false then
 		dgsAttachToAutoDestroy(renderTarget,scrollpane,-1)
@@ -99,8 +112,8 @@ function dgsCreateScrollPane(...)
 	dgsSetData(scrollpane,"scrollbars",{scrollbar1,scrollbar2})
 	dgsSetData(scrollbar1,"attachedToParent",scrollpane)
 	dgsSetData(scrollbar2,"attachedToParent",scrollpane)
-	dgsSetData(scrollbar1,"hitoutofparent",true)
-	dgsSetData(scrollbar2,"hitoutofparent",true)
+	dgsSetData(scrollbar1,"childOutsideHit",true)
+	dgsSetData(scrollbar2,"childOutsideHit",true)
 	dgsSetData(scrollbar1,"scrollType","Vertical")
 	dgsSetData(scrollbar2,"scrollType","Horizontal")
 	dgsSetData(scrollbar1,"length",{0,true})
@@ -111,7 +124,7 @@ function dgsCreateScrollPane(...)
 	dgsSetData(scrollbar2,"minLength",10)
 	dgsAddEventHandler("onDgsElementScroll",scrollbar1,"checkScrollPaneScrollBar",false)
 	dgsAddEventHandler("onDgsElementScroll",scrollbar2,"checkScrollPaneScrollBar",false)
-	triggerEvent("onDgsCreate",scrollpane,sourceResource)
+	triggerEvent("onDgsCreate",scrollpane,sRes)
 	return scrollpane
 end
 
@@ -211,10 +224,10 @@ function configScrollPane(scrollpane)
 	local scbThickV,scbThickH = scbStateV and scbThick or 0,scbStateH and scbThick or 0
 	local relSizX,relSizY = sx-scbThickV,sy-scbThickH
 	if scbStateH and scbStateH ~= oriScbStateH then
-		dgsSetData(scrollbar[2],"position",0)
+		dgsSetData(scrollbar[2],"scrollPosition",0)
 	end
 	if scbStateV and scbStateV ~= oriScbStateV then
-		dgsSetData(scrollbar[1],"position",0)
+		dgsSetData(scrollbar[1],"scrollPosition",0)
 	end
 	dgsSetVisible(scrollbar[1],scbStateV and true or false)
 	dgsSetVisible(scrollbar[2],scbStateH and true or false)
@@ -224,8 +237,8 @@ function configScrollPane(scrollpane)
 	dgsSetPosition(scrollbar[2],x,y+sy-scbThick,false)
 	dgsSetSize(scrollbar[1],scbThick,relSizY,false)
 	dgsSetSize(scrollbar[2],relSizX,scbThick,false)
-	local scroll1 = dgsElementData[scrollbar[1]].position
-	local scroll2 = dgsElementData[scrollbar[2]].position
+	local scroll1 = dgsElementData[scrollbar[1]].scrollPosition
+	local scroll2 = dgsElementData[scrollbar[2]].scrollPosition
 	local lengthVertical = relSizY/childBounding[2]
 	local lengthHorizontal = relSizX/childBounding[1]
 	lengthVertical = lengthVertical < 1 and lengthVertical or 1
@@ -240,6 +253,7 @@ function configScrollPane(scrollpane)
 	dgsSetData(scrollbar[1],"length",length)
 	local verticalScrollSize = eleData.scrollSize/(childBounding[2]-relSizY)
 	dgsSetData(scrollbar[1],"multiplier",{verticalScrollSize,true})
+	dgsSetData(scrollbar[1],"moveType","sync")
 
 	local scbLengthHoz = eleData.scrollBarLength[2]
 	local widLen = 1-(childBounding[1]-relSizX)/childBounding[1]
@@ -248,11 +262,24 @@ function configScrollPane(scrollpane)
 	dgsSetData(scrollbar[2],"length",length)
 	local horizontalScrollSize = eleData.scrollSize*5/(childBounding[1]-relSizX)
 	dgsSetData(scrollbar[2],"multiplier",{horizontalScrollSize,true})
+	dgsSetData(scrollbar[2],"moveType","sync")
+	dgsSetData(scrollpane,"configNextFrame",false)
+	dgsSetData(scrollpane,"configRTNextFrame",true)
+end
 
+function configScrollPaneRT(scrollpane)
+	local eleData = dgsElementData[scrollpane]
+	local scrollbar = eleData.scrollbars
+	local size = eleData.absSize
+	local sx,sy = size[1],size[2]
+	local scbThick = eleData.scrollBarThick
+	local childBounding = eleData.maxChildSize
+	local scbStateV,scbStateH = dgsElementData[scrollbar[1]].visible,dgsElementData[scrollbar[2]].visible
+	local scbThickV,scbThickH = scbStateV and scbThick or 0,scbStateH and scbThick or 0
+	local relSizX,relSizY = sx-scbThickV,sy-scbThickH
 	local renderTarget = eleData.renderTarget_parent
 	if isElement(renderTarget) then
 		destroyElement(renderTarget)
-		eleData.renderTarget = nil
 	end
 	local renderTarget,err = dxCreateRenderTarget(relSizX,relSizY,true,scrollpane)
 	if renderTarget ~= false then
@@ -261,7 +288,7 @@ function configScrollPane(scrollpane)
 		outputDebugString(err,2)
 	end
 	dgsSetData(scrollpane,"renderTarget_parent",renderTarget)
-	dgsSetData(scrollpane,"configNextFrame",false)
+	dgsSetData(scrollpane,"configRTNextFrame",false)
 end
 
 function resizeScrollPane(scrollpane,source) --Need optimize
@@ -271,7 +298,7 @@ function resizeScrollPane(scrollpane,source) --Need optimize
 		local x,y,sx,sy = abspos[1],abspos[2],abssize[1],abssize[2]
 		local maxSize = dgsElementData[scrollpane].maxChildSize
 		local ntempx,ntempy = 0,0
-		local children = ChildrenTable[scrollpane] or {}
+		local children = dgsElementData[scrollpane].children or {}
 		local childrenCnt = #children
 		for k=1,#children do
 			local child = children[k]
@@ -311,8 +338,8 @@ function dgsScrollPaneGetViewOffset(scrollpane)
 	local size = eleData.absSize
 	local scrollbar = eleData.scrollbars
 	local scbThick = eleData.scrollBarThick
-	local OffsetX = -(size[1]-eleData.maxChildSize[1]-(dgsElementData[scrollbar[1]].visible and scbThick or 0))*dgsElementData[scrollbar[1]].position*0.01
-	local OffsetY = -(size[2]-eleData.maxChildSize[2]-(dgsElementData[scrollbar[2]].visible and scbThick or 0))*dgsElementData[scrollbar[2]].position*0.01
+	local OffsetX = -(size[1]-eleData.maxChildSize[1]-(dgsElementData[scrollbar[1]].visible and scbThick or 0))*dgsElementData[scrollbar[1]].scrollPosition*0.01
+	local OffsetY = -(size[2]-eleData.maxChildSize[2]-(dgsElementData[scrollbar[2]].visible and scbThick or 0))*dgsElementData[scrollbar[2]].scrollPosition*0.01
 	if OffsetX < 0 then
 		OffsetX = 0
 	end
@@ -383,16 +410,51 @@ function dgsScrollPaneGetScrollBarState(scrollpane)
 	if not dgsIsType(scrollpane,"dgs-dxscrollpane") then error(dgsGenAsrt(scrollpane,"dgsScrollPaneSetScrollBarState",1,"dgs-dxscrollpane")) end
 	return dgsElementData[scrollpane].scrollBarState[1],dgsElementData[scrollpane].scrollBarState[2]
 end
+
+----------------------------------------------------------------
+-----------------------PropertyListener-------------------------
+----------------------------------------------------------------
+dgsOnPropertyChange["dgs-dxscrollpane"] = {
+	scrollBarThick = function(dgsEle,key,value,oldValue)
+		configScrollPane(dgsEle)
+	end,
+	scrollBarState = function(dgsEle,key,value,oldValue)
+		configScrollPane(dgsEle)
+	end,
+	scrollBarOffset = function(dgsEle,key,value,oldValue)
+		configScrollPane(dgsEle)
+	end,
+	scrollBarLength = function(dgsEle,key,value,oldValue)
+		configScrollPane(dgsEle)
+	end,
+	ignoreParentTitle = function(dgsEle,key,value,oldValue)
+		configPosSize(dgsEle,false,true)
+		configScrollPane(dgsEle)
+	end,
+	ignoreTitle = function(dgsEle,key,value,oldValue)
+		local children = dgsGetChildren(dgsEle)
+		for i=1,#children do
+			if not dgsElementData[children[i]].ignoreParentTitle then
+				configPosSize(children[i],false,true)
+				configScrollPane(children[i])
+			end
+		end
+	end,
+}
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
-dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherited,enabledSelf,eleData,parentAlpha,isPostGUI,rndtgt)
+dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherited,enabledSelf,eleData,parentAlpha,isPostGUI,rndtgt,xRT,yRT,xNRT,yNRT,OffsetX,OffsetY,visible)
 	if MouseData.hit == source then
 		MouseData.topScrollable = source
 	end
 	if eleData.configNextFrame then
 		configScrollPane(source)
 	end
+	if eleData.configRTNextFrame then
+		configScrollPaneRT(source)
+	end
+	local bgColor = eleData.bgColor
 	local scrollbar = eleData.scrollbars
 	local scbThick = eleData.scrollBarThick
 	local xthick = dgsElementData[scrollbar[1]].visible and scbThick or 0
@@ -401,16 +463,45 @@ dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInh
 	local relSizX,relSizY = w-xthick,h-ythick
 	local maxX,maxY = maxSize[1]-relSizX,maxSize[2]-relSizY
 	maxX,maxY = maxX > 0 and maxX or 0,maxY > 0 and maxY or 0
-	local _OffsetX = -maxX*dgsElementData[scrollbar[2]].position*0.01
-	local _OffsetY = -maxY*dgsElementData[scrollbar[1]].position*0.01
-	local xMoveHardness = dgsElementData[ scrollbar[2] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
-	local yMoveHardness = dgsElementData[ scrollbar[1] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
-	local OffsetX = mathLerp(xMoveHardness,eleData.horizontalMoveOffsetTemp,_OffsetX)
-	local OffsetY = mathLerp(yMoveHardness,eleData.verticalMoveOffsetTemp,_OffsetY)
-	eleData.horizontalMoveOffsetTemp = OffsetX
-	eleData.verticalMoveOffsetTemp = OffsetY
-	if OffsetX > 0 then OffsetX = 0 end
-	if OffsetY > 0 then OffsetY = 0 end
+	
+	local _OffsetX = -maxX*dgsElementData[ scrollbar[2] ].scrollPosition*0.01
+	local OffsetX = eleData.horizontalMoveOffset
+	if eleData.horizontalMoveOffset ~= _OffsetX then
+		local mHardness = 1
+		local moveType = dgsElementData[ scrollbar[2] ].moveType
+		if moveType == "slow" then
+			mHardness = eleData.moveHardness[1]
+		elseif moveType == "fast" then
+			mHardness = eleData.moveHardness[2]
+		end
+		OffsetX = mathLerp(mHardness,OffsetX,_OffsetX)
+		if _OffsetX-OffsetX <= 0.5 and _OffsetX-OffsetX >= -0.5 then
+			OffsetX = _OffsetX
+			dgsElementData[ scrollbar[2] ].moveType = "sync"
+		end
+		if OffsetX >= 0 then OffsetX = 0 end
+		eleData.horizontalMoveOffset = OffsetX
+		OffsetX = OffsetX-OffsetX%1
+	end
+	local _OffsetY = -maxY*dgsElementData[ scrollbar[1] ].scrollPosition*0.01
+	local OffsetY = eleData.verticalMoveOffset
+	if eleData.verticalMoveOffset ~= _OffsetY then
+		local mHardness = 1
+		local moveType = dgsElementData[ scrollbar[1] ].moveType
+		if moveType == "slow" then
+			mHardness = eleData.moveHardness[1]
+		elseif moveType == "fast" then
+			mHardness = eleData.moveHardness[2]
+		end
+		OffsetY = mathLerp(mHardness,OffsetY,_OffsetY)
+		if _OffsetY-OffsetY <= 0.5 and _OffsetY-OffsetY >= -0.5 then
+			OffsetY = _OffsetY
+			dgsElementData[ scrollbar[1] ].moveType = "sync"
+		end
+		if OffsetY >= 0 then OffsetY = 0 end
+		eleData.verticalMoveOffset = OffsetY
+		OffsetY = OffsetY-OffsetY%1
+	end
 	------------------------------------
 	if eleData.functionRunBefore then
 		local fnc = eleData.functions
@@ -420,21 +511,10 @@ dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInh
 	end
 	------------------------------------
 	local newRndTgt = eleData.renderTarget_parent
+	local drawTarget
 	if newRndTgt then
-		dxSetRenderTarget(rndtgt)
-		local bgColor = eleData.bgColor
-		dxSetBlendMode(rndtgt and "modulate_add" or "blend")
-		if eleData.bgImage then
-			bgColor = bgColor or 0xFFFFFFFF
-			dxDrawImage(x,y,relSizX,relSizY,eleData.bgImage,0,0,0,tocolor(255,255,255,255*parentAlpha),isPostGUI,rndtgt)
-			bgColor = applyColorAlpha(bgColor,parentAlpha)
-		elseif eleData.bgColor then
-			bgColor = applyColorAlpha(bgColor,parentAlpha)
-			dxDrawRectangle(x,y,relSizX,relSizY,bgColor,isPostGUI)
-		end
-		dxSetBlendMode("add")
 		local filter = eleData.filter
-		local drawTarget = newRndTgt
+		drawTarget = newRndTgt
 		if filter then
 			if type(filter) == "table" and isElement(filter[1]) then
 				if eleData.sourceTexture ~= newRndTgt then
@@ -454,11 +534,39 @@ dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInh
 		else
 			eleData.sourceTexture = false
 		end
+	end
+	dxSetRenderTarget(newRndTgt,true)
+	local scrollPaneOffsetX, scrollPaneOffsetY = mathCeil(mathAbs(OffsetX)), mathCeil(mathAbs(OffsetY))
+	local children = eleData.children
+	if not eleData.childOutsideHit then
+		if MouseData.hit ~= source then
+			enabledInherited = false
+		end
+	end
+	for i=1, #children do
+		local child = children[i]
+		local childAbsPos = dgsElementData[child].absPos
+		local childAbsSize = dgsElementData[child].absSize
+		local childMinX, childMinY, childMaxX, childMaxY = childAbsPos[1], childAbsPos[2], childAbsPos[1] + childAbsSize[1], childAbsPos[2] + childAbsSize[2]
+		if (scrollPaneOffsetX + w > childMinX) and (scrollPaneOffsetX <= childMaxX) and (scrollPaneOffsetY + h > childMinY) and (scrollPaneOffsetY < childMaxY) then
+			renderGUI(child,mx,my,enabledInherited,enabledSelf,newRndTgt,0,0,xNRT,yNRT,OffsetX,OffsetY,parentAlpha,visible)
+		end
+	end
+	dxSetRenderTarget(rndtgt)
+	dxSetBlendMode(rndtgt and "modulate_add" or "blend")
+	if bgColor then
+		bgColor = bgColor or 0xFFFFFFFF
+		local color = applyColorAlpha(bgColor,parentAlpha)
+		dxDrawImage(x,y,relSizX,relSizY,eleData.bgImage,0,0,0,color,isPostGUI,rndtgt)
+		bgColor = applyColorAlpha(bgColor,parentAlpha)
+	end
+	if drawTarget then
 		dxDrawImage(x,y,relSizX,relSizY,drawTarget,0,0,0,tocolor(255,255,255,255*parentAlpha),isPostGUI)
 	end
-	dxSetBlendMode(rndtgt and "modulate_add" or "blend")
-	dxSetRenderTarget(newRndTgt,true)
-	rndtgt = newRndTgt
-	dxSetRenderTarget(rndtgt)
 	return rndtgt,false,mx,my,OffsetX,OffsetY
 end
+
+----------------------------------------------------------------
+-------------------------Children Renderer----------------------
+----------------------------------------------------------------
+dgsChildRenderer["dgs-dxscrollpane"] = false	--Disable children renderer

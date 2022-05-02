@@ -1,7 +1,33 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxscrollbar","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxscrollbar",{
+	arrowWidth = 				{	{ PArg.Number,PArg.Bool }	},
+	arrowColor = 				{	{ PArg.Color, PArg.Color, PArg.Color }	},
+	arrowImage = 				{	PArg.Material+PArg.Nil	},
+	bgColor = 					{	PArg.Color+PArg.Nil		},
+	bgImage = 					{	PArg.Material+PArg.Nil	},
+	cursorColor = 				{	{ PArg.Color, PArg.Color, PArg.Color }	},
+	cursorImage = 				{	PArg.Material+PArg.Nil	},
+	cursorWidth = 				{	{ PArg.Number,PArg.Bool }	},
+	grades = 					{	PArg.Number	},
+	imageRotation = 			{	{	{ PArg.Number, PArg.Number,PArg.Number }, { PArg.Number, PArg.Number, PArg.Number }	}	},
+	length = 					{	{ PArg.Number, PArg.Bool }	},
+	locked = 					{	PArg.Bool	},
+	map = 						{	{ PArg.Number,PArg.Number }	},
+	multiplier = 				{	{ PArg.Number,PArg.Bool }	},
+	scrollPosition = 			{	PArg.Number	},
+	scrollArrow = 				{	PArg.Bool	},
+	troughClickAction = 		{	PArg.String	},
+	troughColor = 				{	{ PArg.Color,PArg.Color }	},
+	troughWidth = 				{	{ PArg.Number,PArg.Bool }	},
+	troughImage = 				{	PArg.Nil+PArg.Material, { PArg.Nil+PArg.Material, PArg.Nil+PArg.Material }	},
+	troughImageSectionMode = 	{	PArg.Bool	},
+	wheelReversed = 			{	PArg.Bool	},
+	isHorizontal = 				{	PArg.Bool	},
+})
 --Dx Functions
 local dxDrawLine = dxDrawLine
-local dxDrawImage = dxDrawImageExt
-local dxDrawRectangle = dxDrawRectangle
+local dxDrawImage = dxDrawImage
 --DGS Functions
 local dgsSetType = dgsSetType
 local dgsGetType = dgsGetType
@@ -23,6 +49,7 @@ local mathAbs = math.abs
 local mathClamp = math.restrict
 
 function dgsCreateScrollBar(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,isHorizontal,relative,parent,arrowImage,troughImage,cursorImage,nColorA,hColorA,cColorA,troughColor,nColorC,hColorC,cColorC
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -53,9 +80,8 @@ function dgsCreateScrollBar(...)
 	local isHorizontal = isHorizontal or false
 	local scrollbar = createElement("dgs-dxscrollbar")
 	dgsSetType(scrollbar,"dgs-dxscrollbar")
-	dgsSetParent(scrollbar,parent,true,true)
 				
-	local res = sourceResource or "global"
+	local res = sRes ~= resource and sRes or "global"
 	local style = styleManager.styles[res]
 	local using = style.using
 	style = style.loaded[using]
@@ -82,7 +108,7 @@ function dgsCreateScrollBar(...)
 		cursorColor = {nColorC or style.cursorColor[1],hColorC or style.cursorColor[2],cColorC or style.cursorColor[3]},
 		cursorImage = cursorImage,
 		cursorWidth = style.cursorWidth or {1,true},
-		grades = false,
+		grades = -1,
 		imageRotation = style.imageRotation,
 		isHorizontal = isHorizontal; --vertical or horizonta,
 		length = {30,false},
@@ -90,15 +116,16 @@ function dgsCreateScrollBar(...)
 		map = {0,100},
 		minLength = 5,
 		multiplier = {1,false},
-		position = 0,
+		scrollPosition = 0,
 		scrollArrow = style.scrollArrow,
+		bgImage = nil,
+		bgColor = nil,
 		troughColor = troughColor or style.troughColor,
+		troughImageSectionMode = false,
 		troughImage = troughImage,
 		troughClickAction = "none",
 		troughWidth = style.troughWidth or style.cursorWidth or {1,true},
 		wheelReversed = false,
-
-
 		renderBuffer = {
 			tempCursorColor = {},
 			tempArrowColor = {},
@@ -107,37 +134,39 @@ function dgsCreateScrollBar(...)
 			colorImageIndex = {},
 		}
 	}
+	dgsSetParent(scrollbar,parent,true,true)
 	calculateGuiPositionSize(scrollbar,x,y,relative or false,w,h,relative or false,true)
-	triggerEvent("onDgsCreate",scrollbar,sourceResource)
+	triggerEvent("onDgsCreate",scrollbar,sRes)
 	return scrollbar
 end
 
 function dgsScrollBarSetScrollPosition(scrollbar,pos,isGrade,isAbsolute)
 	if dgsGetType(scrollbar) ~= "dgs-dxscrollbar" then error(dgsGenAsrt(scrollbar,"dgsScrollBarSetScrollPosition",1,"dgs-dxscrollbar")) end
 	if not(type(pos) == "number") then error(dgsGenAsrt(pos,"dgsScrollBarSetScrollPosition",2,"number")) end
-	pos = isGrade and dgsElementData[scrollbar].grades/grades*100 or pos
+	local grades = dgsElementData[scrollbar].grades
+	if grades and grades <= 0 then
+		pos = isGrade and grades/pos*100 or pos
+	end
 	local scaler = dgsElementData[scrollbar].map
-	if pos < 0 then pos = 0 end
-	if pos > 100 then pos = 100 end
 	if not isAbsolute then
 		pos = (pos-scaler[1])/(scaler[2]-scaler[1])*100
 	end
 	if pos < 0 then pos = 0 end
 	if pos > 100 then pos = 100 end
 	dgsSetData(scrollbar,"moveType","fast")
-	return dgsSetData(scrollbar,"position",pos)
+	return dgsSetData(scrollbar,"scrollPosition",pos)
 end
 
 function dgsScrollBarGetScrollPosition(scrollbar,isGrade,isAbsolute)
 	if dgsGetType(scrollbar) ~= "dgs-dxscrollbar" then error(dgsGenAsrt(scrollbar,"dgsScrollBarGetScrollPosition",1,"dgs-dxscrollbar")) end
-	local pos = dgsElementData[scrollbar].position
+	local pos = dgsElementData[scrollbar].scrollPosition
 	local scaler = dgsElementData[scrollbar].map
 	if not isAbsolute then
 		pos = pos/100*(scaler[2]-scaler[1])+scaler[1]
 	end
 	if isGrade then
 		local grades = dgsElementData[scrollbar].grades
-		if not grades then return pos end
+		if not grades or grades <= 0 then return pos end
 		pos = mathFloor(pos/100*grades+0.5)
 	end
 	return pos
@@ -181,11 +210,11 @@ function scrollScrollBar(scrollbar,button,speed)
 	else
 		slotRange = h-(scrollArrow and (arrowWid[2] and w*arrowWid[1] or arrowWid[1]) or 0)*2
 	end
-	local pos = dgsElementData[scrollbar].position
+	local pos = dgsElementData[scrollbar].scrollPosition
 	local wheelReversed = dgsElementData[scrollbar].wheelReversed and -1 or 1
 	local offsetPos = (rltPos and multiplier*slotRange or multiplier)/slotRange*100*(speed or 1)
 	local gpos = button and pos+offsetPos*wheelReversed or pos-offsetPos*wheelReversed
-	dgsSetData(scrollbar,"position",mathClamp(gpos,0,100))
+	dgsSetData(scrollbar,"scrollPosition",mathClamp(gpos,0,100))
 end
 
 function dgsScrollBarSetCursorLength(scrollbar,length,relative)
@@ -288,6 +317,48 @@ function dgsScrollBarGetTroughClickAction(scb)
 	if dgsGetType(scrollbar) ~= "dgs-dxscrollbar" then error(dgsGenAsrt(scrollbar,"dgsScrollBarGetTroughClickAction",1,"dgs-dxscrollbar")) end
 	return dgsElementData[scrollbar].troughClickAction or "none"
 end
+
+----------------------------------------------------------------
+-----------------------PropertyListener-------------------------
+----------------------------------------------------------------
+dgsOnPropertyChange["dgs-dxscrollbar"] = {
+	length = function(dgsEle,key,value,oldValue)
+		local absSize = dgsElementData[dgsEle].absSize
+		local w,h = absSize[1],absSize[2]
+		local isHorizontal = dgsElementData[dgsEle].isHorizontal
+		if (value[2] and value[1]*(isHorizontal and w-h*2 or h-w*2) or value[1]) < dgsElementData[dgsEle].minLength then
+			dgsElementData[dgsEle].length = {dgsElementData[dgsEle].minLength,false}
+		end
+	end,
+	scrollPosition = function(dgsEle,key,value,oldValue)
+		if oldValue then
+			if not dgsElementData[dgsEle].locked then
+				local grades = dgsElementData[dgsEle].grades
+				local scaler = dgsElementData[dgsEle].map
+				local nValue,oValue = value,oldValue
+				if grades and grades > 0 then
+					nValue,oValue = nValue/100*grades+0.5,oValue/100*grades+0.5
+					nValue,oValue = nValue-nValue%1,oValue-oValue%1
+					dgsSetData(dgsEle,"currentGrade",nValue)
+					dgsElementData[dgsEle][key] = nValue/grades*100
+				else
+					dgsElementData[dgsEle][key] = nValue
+				end
+				triggerEvent("onDgsElementScroll",dgsEle,dgsEle,dgsElementData[dgsEle][key],oldValue,nValue,oValue)
+			else
+				dgsElementData[dgsEle][key] = oldValue
+			end
+		end
+	end,
+	grades = function(dgsEle,key,value,oldValue)
+		if value then
+			local currentGrade = dgsElementData[dgsEle].scrollPosition/100*value+0.5
+			dgsSetData(dgsEle,"currentGrade",currentGrade-currentGrade%1)
+		else
+			dgsSetData(dgsEle,"currentGrade",false)
+		end
+	end,
+}
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
@@ -307,7 +378,7 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 		tempTroughImage_1,tempTroughImage_2 = troughImage,troughImage
 	end
 
-	local pos = eleData.position
+	local pos = eleData.scrollPosition
 	local length,lrlt = eleData.length[1],eleData.length[2]
 	local cursorColor = eleData.cursorColor
 	local arrowColor = eleData.arrowColor
@@ -346,10 +417,11 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 	colorImageIndex[5] = 1
 
 	local slotRange
-	local scrollArrow =  eleData.scrollArrow
+	local scrollArrow = eleData.scrollArrow
 	local cursorWidth,troughWidth,arrowWidth = eleData.cursorWidth,eleData.troughWidth,eleData.arrowWidth
 	local imgRot = eleData.imageRotation
 	local troughPadding,cursorPadding,arrowPadding
+	
 	if isHorizontal then
 		troughWidth = troughWidth[2] and troughWidth[1]*h or troughWidth[1]
 		cursorWidth = cursorWidth[2] and cursorWidth[1]*h or cursorWidth[1]
@@ -424,20 +496,20 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 			if MouseData.clickl == source then
 				colorImageIndex[MouseData.scbClickData] = 3
 				if MouseData.scbClickData == 3 then
-					local position = 0
+					local scrollPosition = 0
 					local mvx,mvy = MouseData.MoveScroll[1],MouseData.MoveScroll[2]
 					local ax,ay = dgsGetPosition(source,false)
 					if csRange ~= 0 then
 						if isHorizontal then
 							local gx = (mx-mvx-ax)/csRange
-							position = (gx < 0 and 0) or (gx > 1 and 1) or gx
+							scrollPosition = (gx < 0 and 0) or (gx > 1 and 1) or gx
 						else
 							local gy = (my-mvy-ay)/csRange
-							position = (gy < 0 and 0) or (gy > 1 and 1) or gy
+							scrollPosition = (gy < 0 and 0) or (gy > 1 and 1) or gy
 						end
 					end
 					dgsSetData(source,"moveType","fast")
-					dgsSetData(source,"position",position*100)
+					dgsSetData(source,"scrollPosition",scrollPosition*100)
 				end
 			else
 				colorImageIndex[MouseData.scbClickData] = 2
@@ -449,8 +521,26 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 		local troughPart1_1,troughPart1_2 = x+arrowWidth,cursorCenter
 		local troughPart2_1,troughPart2_2 = x+arrowWidth+cursorCenter,w-2*arrowWidth-cursorCenter
 		local imgRotHorz = imgRot[1]
-		local __ = tempTroughImage_1 and dxDrawImage(troughPart1_1,y+troughPadding,troughPart1_2,troughWidth,tempTroughImage_1,imgRotHorz[3],0,0,tempTroughColor[1],isPostGUI,rndtgt) or dxDrawRectangle(troughPart1_1,y+troughPadding,troughPart1_2,troughWidth,tempTroughColor[1],isPostGUI)
-		local __ = tempTroughImage_2 and dxDrawImage(troughPart2_1,y+troughPadding,troughPart2_2,troughWidth,tempTroughImage_2,imgRotHorz[3],0,0,tempTroughColor[2],isPostGUI,rndtgt) or dxDrawRectangle(troughPart2_1,y+troughPadding,troughPart2_2,troughWidth,tempTroughColor[2],isPostGUI)
+		if eleData.bgColor then
+			local bgColor = applyColorAlpha(eleData.bgColor,parentAlpha)
+			dxDrawImage(x,y,w,h,eleData.bgImage,imgRotHorz[3],0,0,bgColor,isPostGUI,rndtgt)
+		end
+		if eleData.troughImageSectionMode then
+			local sx,sy = dxGetMaterialSize(tempTroughImage_1)
+			if not sx or not sy then sx,sy = 0,0 end
+			local percent = cursorCenter/slotRange
+			dxDrawImageSection(troughPart1_1,y+troughPadding,troughPart1_2,troughWidth,0,0,sx*percent,sy,tempTroughImage_1,imgRotHorz[3],0,0,tempTroughColor[1],isPostGUI,rndtgt)
+		else
+			dxDrawImage(troughPart1_1,y+troughPadding,troughPart1_2,troughWidth,tempTroughImage_1,imgRotHorz[3],0,0,tempTroughColor[1],isPostGUI,rndtgt)
+		end
+		if eleData.troughImageSectionMode then
+			local sx,sy = dxGetMaterialSize(tempTroughImage_2)
+			if not sx or not sy then sx,sy = 0,0 end
+			local percent = cursorCenter/slotRange
+			dxDrawImageSection(troughPart2_1,y+troughPadding,troughPart2_2,troughWidth,sx*percent,0,sx*(1-percent),sy,tempTroughImage_2,imgRotHorz[3],0,0,tempTroughColor[2],isPostGUI,rndtgt)
+		else
+			dxDrawImage(troughPart2_1,y+troughPadding,troughPart2_2,troughWidth,tempTroughImage_2,imgRotHorz[3],0,0,tempTroughColor[2],isPostGUI,rndtgt)
+		end
 		if scrollArrow then
 			if tempArrowBgColor then
 				dxDrawRectangle(x,y+arrowPadding,arrowWidth,arrowWidth,tempArrowBgColor[colorImageIndex[1]],isPostGUI)
@@ -459,18 +549,32 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 			dxDrawImage(x,y+arrowPadding,arrowWidth,arrowWidth,arrowImage,imgRotHorz[1],0,0,tempArrowColor[colorImageIndex[1]],isPostGUI,rndtgt)
 			dxDrawImage(x+w-arrowWidth,y+arrowPadding,arrowWidth,arrowWidth,arrowImage,imgRotHorz[1]+180,0,0,tempArrowColor[colorImageIndex[5]],isPostGUI,rndtgt)
 		end
-		if cursorImage then
-			dxDrawImage(x+arrowWidth+pos*0.01*csRange,y+cursorPadding,cursorRange,cursorWidth,cursorImage,imgRotHorz[2],0,0,tempCursorColor[colorImageIndex[3]],isPostGUI,rndtgt)
-		else
-			dxDrawRectangle(x+arrowWidth+pos*0.01*csRange,y+cursorPadding,cursorRange,cursorWidth,tempCursorColor[colorImageIndex[3]],isPostGUI)
-		end
+		dxDrawImage(x+arrowWidth+pos*0.01*csRange,y+cursorPadding,cursorRange,cursorWidth,cursorImage,imgRotHorz[2],0,0,tempCursorColor[colorImageIndex[3]],isPostGUI,rndtgt)
 	else
 		local cursorCenter = pos*0.01*csRange+cursorRange/2
 		local troughPart1_1,troughPart1_2 = y+arrowWidth,cursorCenter
 		local troughPart2_1,troughPart2_2 = y+arrowWidth+cursorCenter,h-2*arrowWidth-cursorCenter
 		local imgRotVert = imgRot[2]
-		local __ = tempTroughImage_1 and dxDrawImage(x+troughPadding,troughPart1_1,troughWidth,troughPart1_2,tempTroughImage_1,imgRotVert[3],0,0,tempTroughColor[1],isPostGUI,rndtgt) or dxDrawRectangle(x+troughPadding,troughPart1_1,troughWidth,troughPart1_2,tempTroughColor[1],isPostGUI)
-		local __ = tempTroughImage_2 and dxDrawImage(x+troughPadding,troughPart2_1,troughWidth,troughPart2_2,tempTroughImage_2,imgRotVert[3],0,0,tempTroughColor[2],isPostGUI,rndtgt) or dxDrawRectangle(x+troughPadding,troughPart2_1,troughWidth,troughPart2_2,tempTroughColor[2],isPostGUI)
+		if eleData.bgColor then
+			local bgColor = applyColorAlpha(eleData.bgColor,parentAlpha)
+			dxDrawImage(x,y,w,h,eleData.bgImage,imgRotVert[3],0,0,bgColor,isPostGUI,rndtgt)
+		end
+		if eleData.troughImageSectionMode then
+			local sx,sy = dxGetMaterialSize(tempTroughImage_1)
+			if not sx or not sy then sx,sy = 0,0 end
+			local percent = cursorCenter/slotRange
+			dxDrawImageSection(x+troughPadding,troughPart1_1,troughWidth,troughPart1_2,0,0,sx,sy*percent,tempTroughImage_1,imgRotVert[3],0,0,tempTroughColor[1],isPostGUI,rndtgt)
+		else
+			dxDrawImage(x+troughPadding,troughPart1_1,troughWidth,troughPart1_2,tempTroughImage_1,imgRotVert[3],0,0,tempTroughColor[1],isPostGUI,rndtgt)
+		end
+		if eleData.troughImageSectionMode then
+			local sx,sy = dxGetMaterialSize(tempTroughImage_2)
+			if not sx or not sy then sx,sy = 0,0 end
+			local percent = cursorCenter/slotRange
+			dxDrawImageSection(x+troughPadding,troughPart2_1,troughWidth,troughPart2_2,0,sy*percent,sx,sy*(1-percent),tempTroughImage_2,imgRotVert[3],0,0,tempTroughColor[2],isPostGUI,rndtgt)
+		else
+			dxDrawImage(x+troughPadding,troughPart2_1,troughWidth,troughPart2_2,tempTroughImage_2,imgRotVert[3],0,0,tempTroughColor[2],isPostGUI,rndtgt)
+		end
 		if scrollArrow then
 			if tempArrowBgColor then
 				dxDrawRectangle(x+arrowPadding,y,arrowWidth,arrowWidth,tempArrowBgColor[colorImageIndex[1]],isPostGUI)
@@ -479,11 +583,7 @@ dgsRenderer["dgs-dxscrollbar"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInhe
 			dxDrawImage(x+arrowPadding,y,arrowWidth,arrowWidth,arrowImage,imgRotVert[1],0,0,tempArrowColor[colorImageIndex[1]],isPostGUI,rndtgt)
 			dxDrawImage(x+arrowPadding,y+h-arrowWidth,arrowWidth,arrowWidth,arrowImage,imgRotVert[1]+180,0,0,tempArrowColor[colorImageIndex[5]],isPostGUI,rndtgt)
 		end
-		if cursorImage then
-			dxDrawImage(x+cursorPadding,y+arrowWidth+pos*0.01*csRange,cursorWidth,cursorRange,cursorImage,imgRotVert[2],0,0,tempCursorColor[colorImageIndex[3]],isPostGUI,rndtgt)
-		else
-			dxDrawRectangle(x+cursorPadding,y+arrowWidth+pos*0.01*csRange,cursorWidth,cursorRange,tempCursorColor[colorImageIndex[3]],isPostGUI)
-		end
+		dxDrawImage(x+cursorPadding,y+arrowWidth+pos*0.01*csRange,cursorWidth,cursorRange,cursorImage,imgRotVert[2],0,0,tempCursorColor[colorImageIndex[3]],isPostGUI,rndtgt)
 	end
 	return rndtgt,false,mx,my,0,0
 end

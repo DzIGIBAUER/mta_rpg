@@ -1,3 +1,4 @@
+dgsLogLuaMemory()
 CursorData = {
 	size = 18,
 	enabled = false,
@@ -5,10 +6,14 @@ CursorData = {
 }
 
 function dgsSetCustomCursorImage(cursorType,image,rotation,rotationCenter,offset,scale)
-	local style = styleSettings.cursor
+	local sRes = sourceResource or resource
+	local res = sRes ~= resource and sRes or "global"
+	local style = styleManager.styles[res]
+	local using = style.using
+	style = style.loaded[using].cursor
 	if not cursorType then	--Apply all (image in current style)
 		for k,v in pairs(cursorTypesBuiltIn) do
-			local texture = dgsCreateTextureFromStyle(_,_style[k].image)
+			local texture = dgsCreateTextureFromStyle(using,res,style[k].image)
 			CursorData[k] = {texture,style[k].rotation or 0,style[k].rotationCenter or {0,0},style[k].offset or {0,0},style[k].scale,{dxGetMaterialSize(texture)}}
 		end
 	elseif style[cursorType] then

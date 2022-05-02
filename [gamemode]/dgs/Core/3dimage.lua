@@ -1,6 +1,39 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dx3dimage","dgsBasic","dgsType3D","dgsTypeScreen3D")
+dgsRegisterProperties("dgs-dx3dimage",{
+	canBeBlocked = 			{	PArg.Bool, {
+											checkBuildings = PArg.Nil+PArg.Bool,
+											checkVehicles = PArg.Nil+PArg.Bool,
+											checkPeds = PArg.Nil+PArg.Bool,
+											checkObjects = PArg.Nil+PArg.Bool,
+											checkDummies = PArg.Nil+PArg.Bool,
+											seeThroughStuff = PArg.Nil+PArg.Bool,
+											ignoreSomeObjectsForCamera = PArg.Nil+PArg.Bool,
+											}
+							},
+	color = 				{	PArg.Color		},
+	dimension = 			{	PArg.Number		},
+	fadeDistance = 			{	PArg.Number		},
+	fixImageSize = 			{	PArg.Bool		},
+	imageSize = 			{	{ PArg.Number, PArg.Number }	},
+	interior = 				{	PArg.Number		},
+	maxDistance = 			{	PArg.Number		},
+	position = 				{	{ PArg.Number, PArg.Number, PArg.Number }	},
+	rotation = 				{	PArg.Number		},
+	rotationCenter = 		{	{ PArg.Number, PArg.Number }	},
+	subPixelPositioning = 	{	PArg.Bool		},
+	UVPos = 				{	{ PArg.Number, PArg.Number }	},
+	UVSize = 				{	{ PArg.Number, PArg.Number }	},
+})
+--[[
+dgsRegisterCreationArgList("dgs-dx3dimage",{
+
+})]]
+
 --Dx Functions
 local dxDrawLine = dxDrawLine
-local dxDrawImage = dxDrawImageExt
+local dxDrawImage = dxDrawImage
+local dxDrawImageSection = dxDrawImageSection
 local dxDrawRectangle = dxDrawRectangle
 --
 local getScreenFromWorldPosition = getScreenFromWorldPosition
@@ -9,6 +42,7 @@ local type = type
 local tableInsert = table.insert
 
 function dgsCreate3DImage(...)
+	local sRes = sourceResource or resource
 	local x,y,z,img,color,width,height,maxDistance
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -23,7 +57,6 @@ function dgsCreate3DImage(...)
 	else
 		x,y,z,img,color,width,height,maxDistances = ...
 	end
-
 	if not(type(x) == "number") then error(dgsGenAsrt(x,"dgsCreate3DImage",1,"number")) end
 	if not(type(y) == "number") then error(dgsGenAsrt(y,"dgsCreate3DImage",2,"number")) end
 	if not(type(z) == "number") then error(dgsGenAsrt(z,"dgsCreate3DImage",3,"number")) end
@@ -46,10 +79,12 @@ function dgsCreate3DImage(...)
 		UVSize = {},
 		rotation = 0,
 		rotationCenter = {0,0},
+		isOnScreen = false,
+		isBlocked = false,
 		materialInfo = {},
 	}
-	dgsElementData[image3d].image = type(img) == "string" and dgsImageCreateTextureExternal(image3d,sourceResource,img) or img
-	triggerEvent("onDgsCreate",image3d,sourceResource)
+	dgsElementData[image3d].image = type(img) == "string" and dgsImageCreateTextureExternal(image3d,sRes,img) or img
+	triggerEvent("onDgsCreate",image3d,sRes)
 	return image3d
 end
 
@@ -74,30 +109,6 @@ function dgs3DImageGetSize(image)
 	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageGetSize",1,"dgs-dx3dimage")) end
 	local size = dgsElementData[image].imageSize
 	return size[1],size[2]
-end
-
-function dgs3DImageGetDimension(image)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageGetDimension",1,"dgs-dx3dimage")) end
-	return dgsElementData[image].dimension or -1
-end
-
-function dgs3DImageSetDimension(image,dimension)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageSetDimension",1,"dgs-dx3dimage")) end
-	local inRange = dimension >= -1 and dimension <= 65535
-	if not(type(dimension) == "number" and inRange) then error(dgsGenAsrt(dimension,"dgs3DImageSetDimension",2,"number","-1~65535",inRange and "Out Of Range")) end
-	return dgsSetData(image,"dimension",dimension-dimension%1)
-end
-
-function dgs3DImageGetInterior(image)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageGetInterior",1,"dgs-dx3dimage")) end
-	return dgsElementData[image].interior or -1
-end
-
-function dgs3DImageSetInterior(image,interior)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageSetInterior",1,"dgs-dx3dimage")) end
-	local inRange = interior >= -1
-	if not(type(interior) == "number" and inRange) then error(dgsGenAsrt(interior,"dgs3DImageSetInterior",2,"number","-1~+∞",inRange and "Out Of Range")) end
-	return dgsSetData(image,"interior",interior-interior%1)
 end
 
 function dgs3DImageAttachToElement(image,element,offX,offY,offZ)
@@ -137,20 +148,6 @@ function dgs3DImageGetAttachedOffsets(image,offX,offY,offZ)
 	return false
 end
 
-function dgs3DImageSetPosition(image,x,y,z)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageSetPosition",1,"dgs-dx3dimage")) end
-	if not(type(x) == "number") then error(dgsGenAsrt(x,"dgs3DImageSetPosition",2,"number")) end
-	if not(type(y) == "number") then error(dgsGenAsrt(y,"dgs3DImageSetPosition",3,"number")) end
-	if not(type(z) == "number") then error(dgsGenAsrt(z,"dgs3DImageSetPosition",4,"number")) end
-	return dgsSetData(image,"position",{x,y,z})
-end
-
-function dgs3DImageGetPosition(image)
-	if not(dgsGetType(image) == "dgs-dx3dimage") then error(dgsGenAsrt(image,"dgs3DImageGetPosition",1,"dgs-dx3dimage")) end
-	local pos = dgsElementData[image].position
-	return pos[1],pos[2],pos[3]
-end
-
 function dgs3DImageSetUVSize(image,sx,sy,relative)
 	if dgsGetType(image) ~= "dgs-dx3dimage" then error(dgsGenAsrt(image,"dgs3DImageSetUVSize",1,"dgs-dx3dimage")) end
 	return dgsSetData(image,"UVSize",{sx,sy,relative})
@@ -159,7 +156,8 @@ end
 function dgs3DImageGetUVSize(image,relative)
 	if dgsGetType(image) ~= "dgs-dx3dimage" then error(dgsGenAsrt(image,"dgs3DImageGetUVSize",1,"dgs-dx3dimage")) end
 	local texture = dgsElementData[image].image
-	if isElement(texture) and getElementType(texture) ~= "shader" then
+	local imageType = dgsGetType(texture)
+	if imageType == "texture" or imageType == "svg" then
 		local UVSize = dgsElementData[image].UVSize or {1,1,true}
 		local mx,my = dxGetMaterialSize(texture)
 		local sizeU,sizeV = UVSize[1],UVSize[2]
@@ -181,7 +179,8 @@ end
 function dgs3DImageGetUVPosition(image,relative)
 	if dgsGetType(image) ~= "dgs-dx3dimage" then error(dgsGenAsrt(image,"dgs3DImageGetUVPosition",1,"dgs-dx3dimage")) end
 	local texture = dgsElementData[image].image
-	if isElement(texture) and getElementType(texture) ~= "shader" then
+	local imageType = dgsGetType(texture)
+	if imageType == "texture" or imageType == "svg" then
 		local UVPos = dgsElementData[image].UVPos or {0,0,true}
 		local mx,my = dxGetMaterialSize(texture)
 		local posU,posV = UVPos[1],UVPos[2]
@@ -197,8 +196,10 @@ end
 
 function dgs3DImageGetNativeSize(image)
 	if dgsGetType(image) ~= "dgs-dx3dimage" then error(dgsGenAsrt(image,"dgs3DImageGetNativeSize",1,"dgs-dx3dimage")) end
-	if isElement(dgsElementData[image].image) then
-		return dxGetMaterialSize(image)
+	local texture = dgsElementData[image].image
+	local imageType = dgsGetType(texture)
+	if imageType == "texture" or imageType == "svg" then
+		return dxGetMaterialSize(texture)
 	end
 	return false
 end
@@ -224,7 +225,7 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 		if isElement(attachTable[1]) then
 			if isElementStreamedIn(attachTable[1]) then
 				wx,wy,wz = getPositionFromElementOffset(attachTable[1],attachTable[2],attachTable[3],attachTable[4])
-				eleData.position = {wx,wy,wz}
+				posTable[1],posTable[2],posTable[3] = wx,wy,wz
 			else
 				isRender = false
 			end
@@ -233,8 +234,8 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 		end
 	end
 	if isRender then
-		local camX,camY,camZ = getCameraMatrix()
 		local maxDistance = eleData.maxDistance
+		local camX,camY,camZ = getCameraMatrix()
 		local distance = ((wx-camX)^2+(wy-camY)^2+(wz-camZ)^2)^0.5
 		if distance <= maxDistance and distance > 0 then
 			local canBeBlocked = eleData.canBeBlocked
@@ -253,13 +254,15 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 			local imageSizeX,imageSizeY = eleData.imageSize[1],eleData.imageSize[2]
 			local fadeDistance = eleData.fadeDistance
 			local image = eleData.image
-			if (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, camZ, canBeBlocked.checkBuildings, canBeBlocked.checkVehicles, canBeBlocked.checkPeds, canBeBlocked.checkObjects, canBeBlocked.checkDummies, canBeBlocked.seeThroughStuff,canBeBlocked.ignoreSomeObjectsForCamera))) then
+			eleData.isBlocked = (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, camZ, canBeBlocked.checkBuildings, canBeBlocked.checkVehicles, canBeBlocked.checkPeds, canBeBlocked.checkObjects, canBeBlocked.checkDummies, canBeBlocked.seeThroughStuff,canBeBlocked.ignoreSomeObjectsForCamera)))
+			if eleData.isBlocked then
 				local fadeMulti = 1
 				if maxDistance > fadeDistance and distance >= fadeDistance then
 					fadeMulti = 1-(distance-fadeDistance)/(maxDistance-fadeDistance)
 				end
 				local x,y = getScreenFromWorldPosition(wx,wy,wz,0.5)
-				if x and y then
+				eleData.isOnScreen = x and y
+				if eleData.isOnScreen then
 					local x,y = x-x%1,y-y%1
 					if eleData.fixImageSize then
 						distance = 50
@@ -277,7 +280,12 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 						local uvPx,uvPy,uvSx,uvSy
 						if materialInfo[0] ~= image then	--is latest?
 							materialInfo[0] = image	--Update if not
-							materialInfo[1],materialInfo[2] = dxGetMaterialSize(image)
+							local imageType = dgsGetType(image)
+							if imageType ~= "texture" and imageType ~= "svg" then
+								materialInfo[1],materialInfo[2] = 1,1
+							else
+								materialInfo[1],materialInfo[2] = dxGetMaterialSize(image)
+							end
 						end
 						local uvPos = eleData.UVPos
 						local px,py,pRlt = uvPos[1],uvPos[2],uvPos[3]
@@ -299,7 +307,7 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 									dxDrawImageSection(x+shadowoffx,y-shadowoffy,w,h,uvPx,uvPy,uvSx,uvSy,image,rot,rotOffx,rotOffy,shadowc,isPostGUI,rndtgt)
 								end
 							end
-							dxDrawImageSection(x,y,w,h,uvPx,uvPy,uvSx,uvSy,image,rot,rotOffy,rotOffy,colors,isPostGUI,rndtgt)
+							dxDrawImageSection(x,y,w,h,uvPx,uvPy,uvSx,uvSy,image,rot,rotOffy,rotOffy,color,isPostGUI,rndtgt)
 						else
 							if shadowoffx and shadowoffy and shadowc then
 								local shadowc = applyColorAlpha(shadowc,parentAlpha)
@@ -310,11 +318,10 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 									dxDrawImage(x+shadowoffx,y-shadowoffy,w,h,image,rot,rotOffx,rotOffy,shadowc,isPostGUI,rndtgt)
 								end
 							end
-							dxDrawImage(x,y,w,h,image,rot,rotOffx,rotOffy,colors,isPostGUI,rndtgt)
+							dxDrawImage(x,y,w,h,image,rot,rotOffx,rotOffy,color,isPostGUI,rndtgt)
 						end
-						dxDrawImage(x,y,w,h,image,0,0,0,color)
 					else
-						dxDrawRectangle(x,y,w,h,color)
+						dxDrawRectangle(x,y,w,h,color,isPostGUI)
 					end
 					------------------------------------OutLine
 					local outlineData = eleData.outline
@@ -326,46 +333,48 @@ dgsRenderer["dgs-dx3dimage"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInheri
 						local side = outlineData[1]
 						if side == "in" then
 							if outlineData[6] ~= false then
-								dxDrawLine(x,y+hSideSize,x+w,y+hSideSize,sideColor,sideSize)
+								dxDrawLine(x,y+hSideSize,x+w,y+hSideSize,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[4] ~= false then
-								dxDrawLine(x+hSideSize,y,x+hSideSize,y+h,sideColor,sideSize)
+								dxDrawLine(x+hSideSize,y,x+hSideSize,y+h,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[5] ~= false then 
-								dxDrawLine(x+w-hSideSize,y,x+w-hSideSize,y+h,sideColor,sideSize)
+								dxDrawLine(x+w-hSideSize,y,x+w-hSideSize,y+h,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[7] ~= false then
-								dxDrawLine(x,y+h-hSideSize,x+w,y+h-hSideSize,sideColor,sideSize)
+								dxDrawLine(x,y+h-hSideSize,x+w,y+h-hSideSize,sideColor,sideSize,isPostGUI)
 							end
 						elseif side == "center" then
 							if outlineData[6] ~= false then
-								dxDrawLine(x-hSideSize,y,x+w+hSideSize,y,sideColor,sideSize)
+								dxDrawLine(x-hSideSize,y,x+w+hSideSize,y,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[4] ~= false then
-								dxDrawLine(x,y+hSideSize,x,y+h-hSideSize,sideColor,sideSize)
+								dxDrawLine(x,y+hSideSize,x,y+h-hSideSize,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[5] ~= false then 
-								dxDrawLine(x+w,y+hSideSize,x+w,y+h-hSideSize,sideColor,sideSize)
+								dxDrawLine(x+w,y+hSideSize,x+w,y+h-hSideSize,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[7] ~= false then
-								dxDrawLine(x-hSideSize,y+h,x+w+hSideSize,y+h,sideColor,sideSize)
+								dxDrawLine(x-hSideSize,y+h,x+w+hSideSize,y+h,sideColor,sideSize,isPostGUI)
 							end
 						elseif side == "out" then
 							if outlineData[6] ~= false then
-								dxDrawLine(x-sideSize,y-hSideSize,x+w+sideSize,y-hSideSize,sideColor,sideSize)
+								dxDrawLine(x-sideSize,y-hSideSize,x+w+sideSize,y-hSideSize,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[4] ~= false then
-								dxDrawLine(x-hSideSize,y,x-hSideSize,y+h,sideColor,sideSize)
+								dxDrawLine(x-hSideSize,y,x-hSideSize,y+h,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[5] ~= false then 
-								dxDrawLine(x+w+hSideSize,y,x+w+hSideSize,y+h,sideColor,sideSize)
+								dxDrawLine(x+w+hSideSize,y,x+w+hSideSize,y+h,sideColor,sideSize,isPostGUI)
 							end
 							if outlineData[7] ~= false then 
-								dxDrawLine(x-sideSize,y+h+hSideSize,x+w+sideSize,y+h+hSideSize,sideColor,sideSize)
+								dxDrawLine(x-sideSize,y+h+hSideSize,x+w+sideSize,y+h+hSideSize,sideColor,sideSize,isPostGUI)
 							end
 						end
 					end
 				end
+			else
+				eleData.isOnScreen = false
 			end
 		end
 	end

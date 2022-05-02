@@ -2,9 +2,10 @@
 --If you don't trust dgs.. Please Disable It In "config.txt"
 
 local check = fileExists("update.cfg") and fileOpen("update.cfg") or fileCreate("update.cfg")
-local version = tonumber(fileRead(check,fileGetSize(check))) or 0
+local verRaw = fileRead(check,fileGetSize(check))
 fileClose(check)
-setElementData(resourceRoot,"Version",version)
+setElementData(resourceRoot,"Version",verRaw)
+local version = tonumber(verRaw) or 0
 if dgsConfig.updateSystemDisabled then return end
 
 local _fetchRemote = fetchRemote
@@ -28,12 +29,12 @@ function checkUpdate()
 			if not ManualUpdate then
 				if RemoteVersion > version then
 					outputDebugString("[DGS]Remote Version Got [Remote:"..data.." Current:"..version.."].")
-					outputDebugString("[DGS]Update? Command: updatedgs")
+					outputDebugString("[DGS]Update? Command: "..dgsConfig.updateCommand)
 					if isTimer(updateTimer) then killTimer(updateTimer) end
 					updateTimer = setTimer(function()
 						if RemoteVersion > version then
 							outputDebugString("[DGS]Remote Version Got [Remote:"..RemoteVersion.." Current:"..version.."].")
-							outputDebugString("[DGS]Update? Command: updatedgs")
+							outputDebugString("[DGS]Update? Command: "..dgsConfig.updateCommand)
 						else
 							killTimer(updateTimer)
 						end
@@ -74,10 +75,10 @@ if dgsConfig.updateCheckAuto then
 	updatePeriodTimer = setTimer(checkUpdate,dgsConfig.updateCheckInterval*3600000,0)
 end
 
-addCommandHandler("updatedgs",function(player)
+addCommandHandler(dgsConfig.updateCommand,function(player)
 	if not checkServerVersion(player) then return end
 	local account = getPlayerAccount(player)
-	local isPermit = hasObjectPermissionTo(player,"command.updatedgs")
+	local isPermit = hasObjectPermissionTo(player,"command."..dgsConfig.updateCommand,false)
 	if not isPermit then
 		local accName = getAccountName(account)
 		local adminGroup = aclGetGroup("Admin")
@@ -155,24 +156,28 @@ end
 
 function checkFiles()
 	local xml = xmlLoadFile("updated/meta.xml")
-	for k,v in pairs(xmlNodeGetChildren(xml)) do
+	for k,v in ipairs(xmlNodeGetChildren(xml)) do
+		repeat
 		if xmlNodeGetName(v) == "script" or xmlNodeGetName(v) == "file" then
 			local path = xmlNodeGetAttribute(v,"src")
-			if not string.find(path,"styleMapper.lua") and path ~= "meta.xml" then
-				local sha = ""
-				if fileExists(path) then
-					local file = fileOpen(path)
-					local size = fileGetSize(file)
-					local text = fileRead(file,size)
-					fileClose(file)
-					sha = hash("sha1","blob " .. size .. "\0" ..text)
-				end
-				if sha ~= fileHash[path] then
-					outputDebugString("[DGS]Update Required: ("..path..")")
-					table.insert(preUpdate,path)
-				end
+			if string.find(path,"styleMapper.lua") then break end
+			if path == "meta.xml" then break end
+			if string.find(path,"test.lua") and not dgsConfig.enableTestFile then break end
+			local sha = ""
+			if fileExists(path) then
+				local file = fileOpen(path)
+				local size = fileGetSize(file)
+				local text = fileRead(file,size)
+				fileClose(file)
+				sha = hash("sha1","blob " .. size .. "\0" ..text)
+			end
+			if sha ~= fileHash[path] then
+				outputDebugString("[DGS]Update Required: ("..path..")")
+				table.insert(preUpdate,path)
 			end
 		end
+		break
+		until true
 	end
 	DownloadFiles()
 end
@@ -222,6 +227,19 @@ function DownloadFinish()
 		fileDelete("meta.xml")
 	end
 	recoverStyleMapper()
+	if not dgsConfig.enableTestFile then	--Remove test.lua from meta.xml
+		local xml = xmlLoadFile("meta.xml")
+		for k,v in ipairs(xmlNodeGetChildren(xml)) do
+			if xmlNodeGetName(v) == "script" then
+				if string.find(xmlNodeGetAttribute(v,"src"),"test.lua") then
+					xmlDestroyNode(v)
+					break
+				end
+			end
+		end
+		xmlSaveFile(xml)
+		xmlUnloadFile(xml)
+	end
 	outputDebugString("[DGS]Update Complete ( "..#preUpdate.." File"..(#preUpdate==1 and "" or "s").." Changed )")
 	outputDebugString("[DGS]Please Restart DGS")
 	outputChatBox("[DGS]Update Complete ( "..#preUpdate.." File"..(#preUpdate==1 and "" or "s").." Changed )",root,0,255,0)
@@ -239,16 +257,16 @@ addCommandHandler("dgsver",function(pla,cmd)
 		if vsdd then
 			outputDebugString("[DGS]Version: "..vsdd,3)
 		else
-			outputDebugString("[DGS]Version State is damaged! Please use /updatedgs to update",1)
+			outputDebugString("[DGS]Version State is damaged! Please use /"..dgsConfig.updateCommand.." to update",1)
 		end
 	else
-		outputDebugString("[DGS]Version State is damaged! Please use /updatedgs to update",1)
+		outputDebugString("[DGS]Version State is damaged! Please use /"..dgsConfig.updateCommand.." to update",1)
 	end
 	if getPlayerName(pla) ~= "Console" then
 		if vsdd then
 			outputChatBox("[DGS]Version: "..vsdd,pla,0,255,0)
 		else
-			outputChatBox("[DGS]Version State is damaged! Please use /updatedgs to update",pla,255,0,0)
+			outputChatBox("[DGS]Version State is damaged! Please use /"..dgsConfig.updateCommand.." to update",pla,255,0,0)
 		end
 	end
 end)

@@ -1,7 +1,11 @@
+dgsLogLuaMemory()
+dgsRegisterPluginType("dgs-dxpastehandler")
 GlobalPasteHandler = false
 
-function dgsEnablePasteHandler()
-	if not isElement(GlobalPasteHandler) then
+function dgsPasteHandlerSetEnabled(state)
+	if not state and isElement(GlobalPasteHandler) then
+		return destroyElement(GlobalPasteHandler)
+	elseif state and not isElement(GlobalPasteHandler) then
 		GlobalPasteHandler = createBrowser(1,1,true,true)
 		dgsSetData(GlobalPasteHandler,"asPlugin","dgs-dxpastehandler")
 		dgsSetData(GlobalPasteHandler,"isReady",false)
@@ -20,44 +24,32 @@ function dgsEnablePasteHandler()
 		addEventHandler("DGSI_Paste",GlobalPasteHandler,function(data,theType)
 			if theType == "file" then
 				local result = base64Decode(split(data,",")[2])
-				local texture = dxCreateTexture(result)
-				if texture then
-					return triggerEvent("onDgsPaste",resourceRoot,texture,theType)
-				end
-				triggerEvent("onDgsPaste",resourceRoot,result,theType)
+				return triggerEvent("onDgsPaste",resourceRoot,result,theType)
 			elseif theType == "string" then
-				triggerEvent("onDgsPaste",resourceRoot,data,theType)
+				return triggerEvent("onDgsPaste",resourceRoot,data,theType)
 			end
 		end)
-		return true
+	end
+	return true
+end
+
+function dgsPasteHandlerSetFocused(state)
+	if state then
+		if isElement(GlobalPasteHandler) then
+			return focusBrowser(GlobalPasteHandler)
+		end
+	else
+		if isElement(GlobalPasteHandler) and isBrowserFocused(GlobalPasteHandler) then
+			return focusBrowser()
+		end
 	end
 	return false
 end
 
-function dgsFocusPasteHandler()
-	if isElement(GlobalPasteHandler) then
-		focusBrowser(GlobalPasteHandler)
-	end
-end
-
-function dgsIsPasteHandlerFocused()
+function dgsPasteHandlerIsFocused()
 	return isElement(GlobalPasteHandler) and isBrowserFocused(GlobalPasteHandler)
 end
 
-function dgsBlurPasteHandler()
-	if isElement(GlobalPasteHandler) and isBrowserFocused(GlobalPasteHandler) then
-		return focusBrowser()
-	end
-	return false
-end
-
-function dgsDisablePasteHandler()
-	if isElement(GlobalPasteHandler) then
-		return destroyElement(GlobalPasteHandler)
-	end
-	return false
-end
-
-function dgsIsPasteHandlerEnabled()
+function dgsPasteHandlerIsEnabled()
 	return isElement(GlobalPasteHandler)
 end

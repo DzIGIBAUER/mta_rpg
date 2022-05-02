@@ -1,6 +1,12 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxdetectarea","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxdetectarea",{
+	checkFunctionImage = 	{	PArg.Material	},
+	debugMode = 			{	PArg.Bool	},
+})
 local loadstring = loadstring
 --Dx Functions
-local dxDrawImage = dxDrawImageExt
+local dxDrawImage = dxDrawImage
 local dxGetPixelsSize = dxGetPixelsSize
 local dxGetPixelColor = dxGetPixelColor
 local dxSetRenderTarget = dxSetRenderTarget
@@ -14,8 +20,16 @@ local dgsSetData = dgsSetData
 local assert = assert
 local type = type
 
-detectAreaBuiltIn = {}
+detectAreaBuiltIn = {
+	default = [[
+		return true
+	]],
+	circle = [[
+		return math.sqrt((mxRlt-0.5)^2+(myRlt-0.5)^2)<0.5
+	]],
+}
 function dgsCreateDetectArea(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,relative,parent
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -31,7 +45,7 @@ function dgsCreateDetectArea(...)
 	if not x then
 		local detectarea = createElement("dgs-dxdetectarea")
 		dgsSetType(detectarea,"dgs-dxdetectarea")
-		triggerEvent("onDgsCreate",detectarea,sourceResource)
+		triggerEvent("onDgsCreate",detectarea,sRes)
 		dgsDetectAreaSetFunction(detectarea,detectAreaBuiltIn.default)
 		dgsSetData(detectarea,"debugTextureSize",{sW/2,sH/2})
 		dgsSetData(detectarea,"debugModeAlpha",128)
@@ -47,7 +61,7 @@ function dgsCreateDetectArea(...)
 		dgsSetData(detectarea,"debugMode",false)
 		dgsSetData(detectarea,"debugModeAlpha",128)
 		calculateGuiPositionSize(detectarea,x,y,relative or false,w,h,relative or false,true)
-		triggerEvent("onDgsCreate",detectarea,sourceResource)
+		triggerEvent("onDgsCreate",detectarea,sRes)
 		dgsDetectAreaSetFunction(detectarea,detectAreaBuiltIn.default)
 		return detectarea
 	end
@@ -58,21 +72,13 @@ detectAreaPreDefine = [[
 	local mxRlt,myRlt,mxAbs,myAbs = args[1],args[2],args[3],args[4]
 ]]
 
-detectAreaBuiltIn.default = [[
-	return true
-]]
-
-detectAreaBuiltIn.circle = [[
-	return math.sqrt((mxRlt-0.5)^2+(myRlt-0.5)^2)<0.5
-]]
-
 function dgsDetectAreaDefaultFunction(mxRlt,myRlt,mxAbs,myAbs)
 	return true
 end
 
 function dgsDetectAreaSetFunction(detectarea,fncStr)
 	if dgsGetType(detectarea) ~= "dgs-dxdetectarea" then error(dgsGenAsrt(detectarea,"dgsDetectAreaSetFunction",1,"dgs-dxdetectarea")) end
-	if not (dgsIsType(fncStr,"string") or dgsIsType(fncStr,"texture")) then error(dgsGenAsrt(fncStr,"dgsDetectAreaSetFunction",2,"string/texture")) end
+	if not (dgsIsType(fncStr,"string") or dgsIsType(fncStr,"texture") or dgsIsType(fncStr,"svg")) then error(dgsGenAsrt(fncStr,"dgsDetectAreaSetFunction",2,"string/texture")) end
 	if type(fncStr) == "string" then
 		fncStr = detectAreaBuiltIn[fncStr] or fncStr
 		local fnc,err = loadstring(detectAreaPreDefine..fncStr)
@@ -97,6 +103,7 @@ function dgsDetectAreaSetDebugModeEnabled(detectarea,state,alpha)
 	elseif isElement(dgsElementData[detectarea].debugTexture) then
 		destroyElement(dgsElementData[detectarea].debugTexture)
 	end
+	return true
 end
 
 function dgsDetectAreaGetDebugModeEnabled(detectarea)
@@ -134,22 +141,12 @@ function dgsDetectAreaUpdateDebugView(detectarea)
 	end
 	return true
 end
-
-function dgsDetectAreaAttachToElement(da,ele)
-	local fnc = function(source,mx,my,x,y,w,h)
-		if mx >= x and mx <= x+w and my >= y and my <= y+h then
-			return source
-		end
-	end
-	dgsSetData(ele,"dgsCollider",fnc)
-end
-
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
 dgsRenderer["dgs-dxdetectarea"] = function(source,x,y,w,h,mx,my,cx,cy,enabledInherited,enabledSelf,eleData,parentAlpha,isPostGUI,rndtgt)
 	local color = 0xFFFFFFFF
-	if enabledInherited[1] and mx then
+	if enabledInherited and mx then
 		local checkPixel = eleData.checkFunction
 		if checkPixel then
 			local _mx,_my = (mx-x)/w,(my-y)/h

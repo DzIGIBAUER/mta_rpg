@@ -1,4 +1,5 @@
-﻿dgs_MyIP = "Unknown"
+﻿dgsLogLuaMemory()
+dgs_MyIP = "Unknown"
 triggerServerEvent("DGSI_RequestIP",resourceRoot)
 addEventHandler("DGSI_ReceiveIP",resourceRoot,function(ip)
 	dgs_MyIP = ip
@@ -26,6 +27,7 @@ pBCat = {
 		"RenderTargets",
 		"ScreenSources",
 		"WebBrowsers",
+		"VectorGraphics",
 	},
 	["Lib memory"] = {
 		"name",
@@ -72,7 +74,6 @@ local speedRecv = {}
 local percentLoss = {}
 local MaxStatisticTimes = 60
 --------------------------
-
 function dgsBuildInCMD(command)
 	if not getElementData(resourceRoot,"allowCMD") then return outputChatBox("[DGS]Access Denied",255,0,0) end
 	guiSetInputMode("no_binds_when_editing")
@@ -81,13 +82,14 @@ function dgsBuildInCMD(command)
 		dgsWindowSetSizable(cmdSystem["window"],false)
 		dgsSetProperty(cmdSystem["window"],"textSize",{1.5,1.5})
 		dgsSetProperty(cmdSystem["window"],"outline",{"out",1,tocolor(100,100,100,255)})
-		dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.5,false,false,"OutQuad",300)
-		dgsSizeTo(cmdSystem["window"],sW*0.5,25,false,false,"OutQuad",300)
+		dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.5,false,"OutQuad",300)
+		dgsSizeTo(cmdSystem["window"],sW*0.5,25,false,"OutQuad",300)
 		setTimer(function(command)
-			dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.25,false,false,"InQuad",300)
-			dgsSizeTo(cmdSystem["window"],sW*0.5,sH*0.6,false,false,"InQuad",300)
+			dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.25,false,"InQuad",300)
+			dgsSizeTo(cmdSystem["window"],sW*0.5,sH*0.6,false,"InQuad",300)
 			setTimer(function(command)
 				cmdSystem["cmd"] = dgsCreateCmd(0,0,sW*0.5,sH*0.6-45,false,cmdSystem["window"],1,1)
+				dgsCmdApplyDefaultCommands(cmdSystem["cmd"])
 				dgsCmdAddEventToWhiteList(cmdSystem["cmd"],{"changeMode"})
 				local version = getElementData(resourceRoot,"Version") or "N/A"
 				outputCmdMessage(cmdSystem["cmd"],"( Thisdp's Dx Graphical User Interface System ) Version: "..version)
@@ -103,8 +105,8 @@ function dgsBuildInCMD(command)
 		local x,y = unpack(dgsGetData(cmdSystem["window"],"absPos",false))
 		local sx,sy = unpack(dgsGetData(cmdSystem["window"],"absSize",false))
 		dgsSetProperty(cmdSystem["window"],"title","")
-		dgsMoveTo(cmdSystem["window"],x,y+sy/2-20,false,false,"InQuad",450)
-		dgsSizeTo(cmdSystem["window"],sx,40,false,false,"InQuad",450)
+		dgsMoveTo(cmdSystem["window"],x,y+sy/2-20,false,"InQuad",450)
+		dgsSizeTo(cmdSystem["window"],sx,40,false,"InQuad",450)
 		setTimer(function()
 			destroyElement(cmdSystem["window"])
 		end,500,1)
@@ -123,8 +125,8 @@ addEventHandler("onDgsWindowClose",resourceRoot,function()
 		local x,y = unpack(dgsGetData(cmdSystem["window"],"absPos",false))
 		local sx,sy = unpack(dgsGetData(cmdSystem["window"],"absSize",false))
 		dgsSetProperty(cmdSystem["window"],"title","")
-		dgsMoveTo(cmdSystem["window"],x,y+sy/2-20,false,false,"InQuad",450)
-		dgsSizeTo(cmdSystem["window"],sx,40,false,false,"InQuad",450)
+		dgsMoveTo(cmdSystem["window"],x,y+sy/2-20,false,"InQuad",450)
+		dgsSizeTo(cmdSystem["window"],sx,40,false,"InQuad",450)
 		setTimer(function()
 			destroyElement(cmdSystem["window"])
 		end,500,1)
@@ -137,8 +139,8 @@ addEventHandler("onDgsWindowClose",resourceRoot,function()
 		local x,y = unpack(dgsGetData(source,"absPos",false))
 		local sx,sy = unpack(dgsGetData(source,"absSize",false))
 		dgsSetData(source,"title","")
-		dgsMoveTo(source,x,y+sy/2-20,false,false,"InQuad",350)
-		dgsSizeTo(source,sx,40,false,false,"InQuad",350)
+		dgsMoveTo(source,x,y+sy/2-20,false,"InQuad",350)
+		dgsSizeTo(source,sx,40,false,"InQuad",350)
 		setTimer(function(source)
 			destroyElement(source)
 		end,380,1,source)
@@ -214,7 +216,7 @@ dgsCmdAddCommandHandler("performancebrowser",function(cmd)
 	end
 end)
 
-function netstatus(cmd)
+dgsCmdAddCommandHandler("netstatus",function(cmd)
 	if not isElement(netSystem["window"]) then
 		netSystem["window"] = dgsCreateAnimationWindow(sW/2-300,sH/2-200,600,400,"Network Status",false,tocolor(20,20,200,255),_,_,tocolor(80,140,200,255),_,tocolor(0,0,0,200))
 		dgsWindowSetSizable(netSystem["window"],false)
@@ -225,25 +227,6 @@ function netstatus(cmd)
 		outputCmdMessage(cmd,"Network Monitor: OFF")
 		dgsCloseWindow(netSystem["window"])
 	end
-end
-dgsCmdAddCommandHandler("netstatus",netstatus)
-
-dgsCmdAddCommandHandler("help",function(cmd)
-	outputCmdMessage(cmd,"Help Commands:")
-	outputCmdMessage(cmd," dxstatus")
-	outputCmdMessage(cmd," exit")
-	outputCmdMessage(cmd," mtaversion")
-	outputCmdMessage(cmd," mode")
-	outputCmdMessage(cmd," netstatus")
-	outputCmdMessage(cmd," serial")
-	outputCmdMessage(cmd," version")
-	outputCmdMessage(cmd," performancebrowser")
-end)
-
-dgsCmdAddCommandHandler("exit",function(cmd)
-    if isElement(cmdSystem["window"]) then
-        dgsCloseWindow(cmdSystem["window"])
-    end
 end)
 
 -----------------------------Inside CMD_Event
@@ -384,11 +367,11 @@ function dgsCreateAnimationWindow(...)
 	dgsSetProperty(window,"textSize",{1.5,1.5})
 	dgsSetProperty(window,"outline",{"out",1,tocolor(100,100,100,255)})
 	dgsSetData(window,"animated",1)
-	dgsMoveTo(window,x,y+sy/2-12.5,false,false,"OutQuad",200)
-	dgsSizeTo(window,sx,25,false,false,"OutQuad",200)
+	dgsMoveTo(window,x,y+sy/2-12.5,false,"OutQuad",200)
+	dgsSizeTo(window,sx,25,false,"OutQuad",200)
 	setTimer(function(window)
-		dgsMoveTo(window,x,y,false,false,"InQuad",200)
-		dgsSizeTo(window,sx,sy,false,false,"InQuad",200)
+		dgsMoveTo(window,x,y,false,"InQuad",200)
+		dgsSizeTo(window,sx,sy,false,"InQuad",200)
 		setTimer(function(window)
 			triggerEvent("onAnimationWindowCreate",window)
 		end,202,1,window)
@@ -578,7 +561,7 @@ function createAboutDGS()
 		dgsWindowSetSizable(AboutDGS.window, false)
 		showCursor(true)
 		dgsSetAlpha(AboutDGS.window,0)
-		dgsAlphaTo(AboutDGS.window,1,false,"InQuad",500)
+		dgsAlphaTo(AboutDGS.window,1,"InQuad",500)
 		setTimer(function()
 			if isElement(AboutDGS.window) then
 				AboutDGS.content = dgsCreateMemo(10, 5, 680, 360, "Loading...", false,AboutDGS.window)
@@ -588,7 +571,7 @@ function createAboutDGS()
 		end,500,1)
 		addEventHandler("onDgsWindowClose",AboutDGS.window,function()
 			cancelEvent()
-			dgsAlphaTo(source,0,false,"InQuad",500)
+			dgsAlphaTo(source,0,"InQuad",500)
 			showCursor(false)
 			setTimer(function(source)
 				if isElement(source) then

@@ -1,8 +1,11 @@
+dgsConfig.updateCommand = "updatedgs"
+dgsConfig.updateCheckNoticeInterval = 120
+dgsConfig.disableCompatibilityCheck = false
 dgsConfig.backupMeta = true
 dgsConfig.enableBuiltInCMD = true
-dgsConfig.updateSystemDisabled = false
 dgsConfig.updateCheck = true
+dgsConfig.updateSystemDisabled = false
 dgsConfig.g2d = true
 dgsConfig.backupStyleMeta = false
-dgsConfig.updateCheckNoticeInterval = 120
+dgsConfig.enableTestFile = true
 dgsConfig.updateCheckInterval = 120

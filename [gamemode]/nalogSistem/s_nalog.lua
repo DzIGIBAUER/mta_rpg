@@ -1,132 +1,88 @@
-local policy = {
-    maxPassLength = tonumber(get("maxPassLength")),
-    minPassLength = tonumber(get("minPassLength")),
-    maxUserLength = tonumber(get("maxUserLength")),
-    minUserLength = tonumber(get("minUserLength"))
-}
+local active_codes = {}
 
-local function posaljiPoruku(client, event, poruka, ...)
-    if poruka then
-        poruka = string.format(poruka, arg)
+
+--- Pretvara string karaktere u decimal code point i sabira ih.
+-- Ovo koristimo da od nasumicnog teksta dobijemo nasumican broj.
+-- @param str string: Teks koji prevramo u broj.
+local function string_to_num(str)
+    local num = 1
+    for i = 1, #str do
+        local char = string.sub(str, i, i)
+        num = num + utfCode(char)
     end
-    triggerClientEvent(client, event, client, poruka)
+    return num
 end
 
-local function loginPokusaj(username, lozinka)
-    local db = exports["dbSistem"].get_connection()
-    if not db then
-        return posaljiPoruku(client, "onLoginNeuspesan", "Nije ostvarena veza sa bazom podataka.")
 
+--- Pravi 'auth_kod' za igraca kako bi mogao da se uloguje preko sajta u igricu.
+-- Kod mora da bude unikatan pa se serial igraca pretvara u broj i mnozi sa 'getTickCount'.
+-- @param text string: Tekst koji je pretvoren u broj i pomnozen sa 'getTickCount' da bi se dobio sto unikatniju broj.
+local function kreiraj_auth_code(text)
+    local rand_number = string_to_num(text) * getTickCount()
+    return string.format("%010d", rand_number)
+end
+
+--- Dodaje kod u tabelu aktivnih kodova kao kljuc cija je vrednost igrac.
+-- Takodje salje kod igracu.
+-- @param player player: Igrac ciji kod je aktiviran.
+-- @param code string: Kod igraca.
+local function aktiviraj_auth_code(player, code)
+    triggerClientEvent(player, "nalogSistem:ServerPoslaoAuthCode", resourceRoot, code)
+    active_codes[code] = player
+end
+
+
+--- Kada se igrac poveze generisemo mu i saljemo kod od njegovog serial-a ili IP adrese.
+-- Ako kod nije unikatan cekamo 10ms i pokusamo ponovo.
+-- Cekanje 10ms ce znaciti drugu vrednost koju vraca 'getTickCount' i samim tim drugi broj, koji bi trebalo da je unikatan,
+-- a ako ne radimo istu stvar opet.
+local function _igrac_se_povezao()
+    local str_for_code = getPlayerSerial(source) or getPlayerIP(source)
+    if not str_for_code then
+        kickPlayer(source, "Server nije uspeo da pristupi Vašem serial-u ni IP adresi.")
+        return
     end
 
-    local client = client
+    local code = kreiraj_auth_code(str_for_code)
+    
+    if not active_codes[code] then
+        setTimer(aktiviraj_auth_code, 5000, 1, source, code)
+        return
+    end
 
-    dbQuery(function(handle)
-        local result, affRows, lastID = dbPoll(handle, 0)
 
-        if handle == false then
-            local errCode, errMsg = affRows, lastID
-            return posaljiPoruku(
-                client,
-                "onLoginNeuspesan",
-                "Došlo je do greške sa bazom podataka. Error code %s.", errCode
-            )
+    local function pokusaj_ponovo()
+        local code = kreiraj_auth_code(str_for_code)
+        if not active_codes[code] then
+            aktiviraj_auth_code(source, code)
+            killTimer(sourceTimer)
         end
-
-        if next(result) == nil then
-            return posaljiPoruku(client, "onLoginNeuspesan", "Nepostoji nalog sa tim korisničkim imenom.")
-        end
-
-        passwordVerify(lozinka, result[1].lozinka, function(matches)
-            if not matches then
-                return posaljiPoruku(client, "onLoginNeuspesan", "Netačna lozinka.")
-            end
-
-            posaljiPoruku(client, "onLoginUspesan")
-            result[1].id = nil -- imamo nalogID vec, ne treba nam 2 puta a uzeo sam sve sa '*' u sql komandi
-            result[1].lozinka = nil -- vise nam ne treba
-            
-            triggerEvent("igracSistem:igracUlogovan", client, result[1])
-            
-
-            dbExec(db, "UPDATE nalog SET zadnjaPrijava = CURRENT_TIMESTAMP() WHERE id = ?", result[1].id)
-
-        end)
-
-    end, db, "SELECT * FROM nalog n INNER JOIN igrac i ON i.nalogID = n.id AND n.ime = ?", username)
+    end
+    setTimer(pokusaj_ponovo, 10, 0)
 
 end
-addEvent("onLoginPokusaj", true)
-addEventHandler("onLoginPokusaj", resourceRoot, loginPokusaj)
+addEventHandler("onPlayerJoin", root, _igrac_se_povezao)
 
-local function registerPokusaj(username, lozinka)
-    if #username < policy.minUserLength or #username > policy.maxUserLength then
-        return posaljiPoruku(
-            client,
-            "onRegistracijaNeuspesna",
-            "Korisničko ime mora da bude duže od %s a kraće od %s karaktera.", policy.minUserLength, policy.maxUserLength
-        )
+
+
+
+
+function auth_user(code, igrac_info)
+    local igrac = active_codes[code]
+    if not igrac then
+        return {false, "Neuspešan login. Rekonektujte se na server. Ako se problem nastavi kontaktirajte administraciju."}
     end
 
-    if #lozinka < policy.minPassLength or #username > policy.maxUserLength then
-        return posaljiPoruku(
-            client,
-            "onRegistracijaNeuspesna",
-            "Lozinka mora da bude duža od %s a kraća od %s karaktera.", policy.minPassLength, policy.maxPassLength
-        )
-    end
+    active_codes[code] = nil
 
-    local db = exports["dbSistem"].get_connection()
-    if not db then
-        return posaljiPoruku(client, "onRegistracijaNeuspesna", "Nije ostvarena veza sa bazom podataka.")
-    end
+    triggerEvent("igracSistem:igracUlogovan", igrac, igrac_info)
+    triggerClientEvent("igracSistem:authGotov", igrac)
 
-    local client = client
-
-    local function lozinkaSpremna(hashedPassword)
-        dbQuery(function(handle)
-            local result, affRows, lastID = dbPoll(handle, 0)
-
-            if handle == false then
-                local errCode, errMsg = affRows, lastID
-                return posaljiPoruku(
-                    client,
-                    "onRegistracijaNeuspesna",
-                    "Došlo je do greške sa bazom podataka prilikom registracije vašeg naloga. Error code %s.", errCode
-                )
-            end
-
-            posaljiPoruku(client, "onRegistracijaUspesna")
-
-        end, db, "INSERT INTO nalog (ime, lozinka) VALUES (?, ?)", username, hashedPassword)
-    end
-
-    local function preoveraUnikatnosti(handle)
-        local result, affRows, lastID = dbPoll(handle, 0)
-
-        if handle == false then
-            local errCode, errMsg = affRows, lastID
-            return posaljiPoruku(
-                client,
-                "onRegistracijaNeuspesna",
-                "Došlo je do greške sa bazom podataka. Error code %s.", errCode
-            )
-        end
-
-        if select(2, next(result[1])) ~= 0 then
-            return posaljiPoruku(client, "onRegistracijaNeuspesna", "Već postoji nalog sa tim korisničkim imenom. Izaberite drugo.")
-        end
-
-        passwordHash(lozinka, "bcrypt", {}, lozinkaSpremna)
-    end
-    dbQuery(preoveraUnikatnosti, db, "SELECT EXISTS(SELECT * FROM nalog WHERE ime = ?)", username)
+    return {true, "Ok"}
 
 end
-addEvent("onRegisterPokusaj", true)
-addEventHandler("onRegisterPokusaj", resourceRoot, registerPokusaj)
 
-
-addEvent("onClientTraziPolicyInfo", true)
-addEventHandler("onClientTraziPolicyInfo", resourceRoot, function()
-    triggerClientEvent("onClientPolicyInfo", resourceRoot, policy)
-end)
+local function _igrac_diskonektovan()
+    active_codes[source] = nil
+end
+addEventHandler("onPlayerQuit", resourceRoot, _igrac_diskonektovan)

@@ -1,3 +1,10 @@
+dgsLogLuaMemory()
+dgsRegisterType("dgs-dxbrowser","dgsBasic","dgsType2D")
+dgsRegisterProperties("dgs-dxbrowser",{
+	color = 				{	PArg.Color		},
+	isTransparent = 		{	PArg.Bool		},
+	isLocal = 				{	PArg.Bool		},
+})
 --Dx Functions
 local dxDrawImage = dxDrawImage
 --DGS Functions
@@ -20,7 +27,10 @@ local addEventHandler = addEventHandler
 local assert = assert
 local type = type
 
+DGSI_RegisterMaterialType("dgs-dxbrowser","texture")
+
 function dgsCreateBrowser(...)
+	local sRes = sourceResource or resource
 	local x,y,w,h,relative,parent,isLocal,isTransparent,resX,resY,color
 	if select("#",...) == 1 and type(select(1,...)) == "table" then
 		local argTable = ...
@@ -45,7 +55,6 @@ function dgsCreateBrowser(...)
 	local browser = createBrowser(1,1,isLocal and true or false,isTransparent and true or false)
 	if not isElement(browser) then error(dgsGenAsrt(browser,"dgsCreateBrowser",_,_,_,_,"Failed to create remote browser (createBrowser returns false)!")) end
 	dgsSetType(browser,"dgs-dxbrowser")
-	dgsSetParent(browser,parent,true,true)
 	dgsElementData[browser] = {
 		renderBuffer = {},
 		color = color or white,
@@ -53,11 +62,12 @@ function dgsCreateBrowser(...)
 		isLocal = isLocal and true or false,
 		requestCommand = {},
 	}
+	dgsSetParent(browser,parent,true,true)
 	calculateGuiPositionSize(browser,x,y,relative,w,h,relative,true)
 	local size = dgsElementData[browser].absSize
 	resizeBrowser(browser,resX or size[1],resY or size[2])
 	dgsElementData[browser].browserSize = {resX or size[1],resY or size[2]}
-	triggerEvent("onDgsCreate",browser,sourceResource)
+	triggerEvent("onDgsCreate",browser,sRes)
 	addEventHandler("onDgsMouseMove",browser,function(x,y)
 		local size = dgsElementData[source].absSize
 		local brosize = dgsElementData[source].browserSize

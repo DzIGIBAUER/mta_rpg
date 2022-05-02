@@ -1,3 +1,4 @@
+dgsLogLuaMemory()
 local loadstring = loadstring
 dgsExportedFunctionName = {}
 dgsResName = getResourceName(getThisResource())
@@ -19,6 +20,7 @@ function dgsImportFunction(name,nameAs)
 			local unpack = unpack
 			local outputDebugString = outputDebugString
 			local DGSCallMT = {}
+			local functionCallLogger = {}
 			dgsImportHead = {}
 			dgsImportHead.dgsName = "]]..dgsResName..[["
 			dgsImportHead.dgsResource = getResourceFromName(dgsImportHead.dgsName)
@@ -54,12 +56,14 @@ function dgsImportFunction(name,nameAs)
 				end
 				addEventHandler("onDgsStart",root,onDgsStart)
 			end)
-			local isTraceDebug = getElementData(localPlayer,"DGS-DEBUG") == 3
+			local isTraceDebug = getElementData(localPlayer,"DGS-DebugTracer") or (getElementData(localPlayer,"DGS-DEBUG") == 3)
 			addEventHandler("onClientElementDataChange",localPlayer,function(key,_,v)
-				if key == "DGS-DEBUG" then
-					isTraceDebug = v == 3
+				if key == "DGS-DebugTracer" or key == "DGS-DEBUG" then
+					isTraceDebug = getElementData(localPlayer,"DGS-DebugTracer") and (getElementData(localPlayer,"DGS-DEBUG") == 3)
 				end
 			end,false)
+			local fncCallLoggerDef = {line=-1,file="Unknown",fncName="Unknown"}
+			local fncCallLoggerSelf = {line=-1,file="Unknown",fncName="Unknown"}
 			function DGSCallMT:__index(fncName)
 				if type(fncName) ~= 'string' then fncName = tostring(fncName) end
 				self[fncName] = function(...)
@@ -67,15 +71,28 @@ function dgsImportFunction(name,nameAs)
 					if isElement(dgsRoot) then
 						local isCreateFunction = fncName:sub(1,9) == "dgsCreate"
 						if isTraceDebug then
-							local data = debug.getinfo(2)
-							local retValue = {call(dgsImportHead.dgsResource, fncName, ...)}
-							if isCreateFunction and isElement(retValue[1]) then
-								call(dgsImportHead.dgsResource, "dgsSetProperty",retValue[1],"debugTrace",{line=data.currentline,file=data.source:gsub("\\","/"):gsub("@",":"),fncName=fncName})
+							local data
+							local index = 5
+							repeat
+								data = data or debug.getinfo(index)
+								index = index-1
+								if index == 0 then break end
+							until data and data.source:sub(1,1) == "@"
+							if data then
+								functionCallLogger = fncCallLoggerSelf
+								functionCallLogger.line=data.currentline
+								functionCallLogger.file=data.source
+								functionCallLogger.fncName=fncName
+								local retValue = {call(dgsImportHead.dgsResource, fncName, ...)}
+								if isCreateFunction and isElement(retValue[1]) then
+									call(dgsImportHead.dgsResource, "dgsSetProperty",retValue[1],"debugTrace",functionCallLogger)
+								end
+								return unpack(retValue)
+							else
+								functionCallLogger = fncCallLoggerDef
 							end
-							return unpack(retValue)
-						else
-							return call(dgsImportHead.dgsResource, fncName, ...)
 						end
+						return call(dgsImportHead.dgsResource, fncName, ...)
 					else
 						dgsImportHead = nil
 						dgsRoot = nil
@@ -84,7 +101,33 @@ function dgsImportFunction(name,nameAs)
 				end
 				return self[fncName]
 			end
+			addEventHandler("DGSI_onDebugRequestContext",resourceRoot,function()
+				triggerEvent("DGSI_onDebugSendContext",resourceRoot,functionCallLogger)
+			end,false)
+			addEventHandler("DGSI_onDebug",resourceRoot,function(debugType,...)
+				if isTraceDebug then
+					if debugType == "PropertyCompatibility" then
+						local line,file,fncName = functionCallLogger.line,functionCallLogger.file,functionCallLogger.fncName
+						local oldPropertyName,newPropertyName = ...
+						outputDebugString("Compatibility Check "..file..":"..line.." @'"..fncName.."', replace property '"..oldPropertyName.."' with '"..newPropertyName.."'",4,255,180,100)
+					elseif debugType == "FunctionCompatibility" then
+						local line,file,fncName = functionCallLogger.line,functionCallLogger.file,functionCallLogger.fncName
+						local oldFunctionName,newFunctionName = ...
+						outputDebugString("Compatibility Check "..file..":"..line.." @'"..fncName.."', replace function '"..oldFunctionName.."' with '"..newFunctionName.."'",4,255,180,100)
+					elseif debugType == "ArgumentCompatibility" then
+						local line,file,fncName = functionCallLogger.line,functionCallLogger.file,functionCallLogger.fncName
+						local argument,detail = ...
+						outputDebugString("Compatibility Check "..file..":"..line.." @'"..fncName.."', at argument "..argument..". "..detail,4,255,180,100)
+					elseif debugType == "AnimationError" then
+						local property,file,line,fncName = ...
+						if file and line and fncName then
+							outputDebugString("Traced "..file..":"..line.." @'"..fncName.."'",4,255,180,100)
+						end
+					end
+				end
+			end,false)
 			DGS = setmetatable({}, DGSCallMT)
+			triggerEvent("DGSI_onImport",root,resourceRoot)
 		end
 		]]
 		for i,name in ipairs(getResourceExportedFunctions()) do
@@ -99,20 +142,21 @@ function dgsImportFunction(name,nameAs)
 end
 
 G2DHookerEvents = {}
-function dgsG2DLoadHooker()
+function dgsG2DLoadHooker(isLocal)
 	if table.count(G2DHookerEvents) == 0 then 
 		addEventHandler("onDgsEditAccepted",root,handleHookerEvents)
 		addEventHandler("onDgsTextChange",root,handleHookerEvents)
 		addEventHandler("onDgsComboBoxSelect",root,handleHookerEvents)
 		addEventHandler("onDgsTabSelect",root,handleHookerEvents)
 	end
-	G2DHookerEvents[sourceResource or resource] = true	
+	G2DHookerEvents[sourceResource or resource] = true
+	local usingLocal = isLocal and "local" or ""
 	return [[
 		if loadedG2D then return end
 		isGUIGridList = {}
 		isGUIComboBox = {}
 		loadedG2D = true
-		loadstring(exports.dgs:dgsImportFunction())()
+		loadstring(exports["]]..dgsResName..[["]:dgsImportFunction())()
 		for fName,fnc in pairs(_G) do
 			if fName:sub(1,3) == "gui" then
 				_G["_"..fName] = fnc
@@ -174,7 +218,7 @@ function dgsG2DLoadHooker()
 		guiComboBoxClear = dgsComboBoxClear
 		guiComboBoxGetItemCount = dgsComboBoxGetItemCount
 		guiComboBoxGetItemText = function(combobox,item,...)
-			if item then
+			if item and item ~= -1 then
 				item = isGUIComboBox[combobox] and item+1 or item
 			end
 			return dgsComboBoxGetItemText(combobox,item,...)
@@ -190,21 +234,21 @@ function dgsG2DLoadHooker()
 		end
 		guiComboBoxIsOpen = dgsComboBoxGetState
 		guiComboBoxRemoveItem = function(combobox,item,...)
-			if item then
+			if item and item ~= -1 then
 				item = isGUIComboBox[combobox] and item+1 or item
 			end
 			return dgsComboBoxRemoveItem(combobox,item,...)
 		end
 		guiComboBoxSetItemText = function(combobox,item,...)
-			if item then
+			if item and item ~= -1 then
 				item = isGUIComboBox[combobox] and item+1 or item
 			end
 			return dgsComboBoxSetItemText(combobox,item,...)
 		end
 		guiComboBoxSetOpen = dgsComboBoxSetState
 		guiComboBoxSetSelected = function(combobox,item,...)
-			if item then
-				item = isGUIComboBox[combobox] and item+1 or item
+			if item and isGUIComboBox[combobox] and item ~= -1 then
+				item = item+1
 			end
 			return dgsComboBoxSetSelectedItem(combobox,item,...)
 		end
@@ -219,6 +263,7 @@ function dgsG2DLoadHooker()
 		guiEditSetReadOnly = dgsEditSetReadOnly
 		guiCreateGridList = function(...)
 			local gl = dgsCreateGridList(...)
+			dgsSetProperty(gl,"defaultSortFunctions",{"numGreaterLowerStrFirst","numGreaterUpperStrFirst"})
 			isGUIGridList[gl] = true
 			addEventHandler("onDgsDestroy",gl,function()
 				isGUIGridList[source] = nil
@@ -247,31 +292,31 @@ function dgsG2DLoadHooker()
 			end
 		end
 		guiGridListGetItemColor = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListGetItemColor(gl,row,...)
 		end
 		guiGridListGetItemData = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListGetItemData(gl,row,...)
 		end
 		guiGridListSetItemData = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListSetItemData(gl,row,...)
 		end
 		guiGridListGetItemText = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListGetItemText(gl,row,...)
 		end
 		guiGridListSetItemText = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListSetItemText(gl,row,...)
@@ -299,19 +344,19 @@ function dgsG2DLoadHooker()
 			return newItems
 		end
 		guiGridListRemoveRow = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListRemoveRow(gl,row,...)
 		end
 		guiGridListSetItemColor = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListSetItemColor(gl,row,...)
 		end
 		guiGridListSetSelectedItem = function(gl,row,...)
-			if row then
+			if row and row ~= -1 then
 				row = isGUIGridList[gl] and row+1 or row
 			end
 			return dgsGridListSetSelectedItem(gl,row,...)
@@ -485,23 +530,26 @@ end
 setElementData(root,"__DGSRes",getThisResource(),false)
 addEventHandler("onClientResourceStop",resourceRoot,function() setElementData(root,"__DGSRes",false,false) end)
 
-OOPClassString = ""
-function loadOOPClass()
-	local OOPFile = fileOpen("classlib.lua")
-	local str = fileRead(OOPFile,fileGetSize(OOPFile))
-	fileClose(OOPFile)
+OOPImportCache = nil
+OOPImportTimer = nil
+
+function dgsImportOOPClass()
+	if OOPImportCache then return OOPImportCache end
+	local matched,content = verifyFile("classlib.lua",true)
+	if not matched then return outputChatBox("[DGS] Failed to load classlib.lua (File mismatch)",255,0,0) end
+	local str = content
 	if fileExists("customOOP.lua") then
-		local customOOPFileList = fileOpen("customOOP.lua")
-		local s = fileRead(customOOPFileList,fileGetSize(customOOPFileList)):gsub("\r\n","\n")
+		local matched,content = verifyFile("customOOP.lua",true)
+		if not matched then outputChatBox("[DGS] Failed to load customOOP.lua (File mismatch)",255,0,0) end
+		local s = content:gsub("\r\n","\n")
 		local list = split(s,"\n")
 		for i=1,#list do
 			if fileExists(list[i]) then
-				local customOOPCode = fileOpen(list[i])
-				local s = fileRead(customOOPCode,fileGetSize(customOOPCode))
-				fileClose(customOOPCode)
-				local f,e = loadstring(s)
+				local matched,content = verifyFile(list[i],true)
+				if not matched then outputChatBox("[DGS] Failed to load "..list[i].." (File mismatch)",255,0,0) end
+				local f,e = loadstring(content)
 				if f then
-					str = str.."\n"..s
+					str = str.."\n"..content
 				else
 					outputDebugString("[DGS]Failed to load custom OOP script ("..list[i]..":"..e..")",1)
 				end
@@ -509,12 +557,12 @@ function loadOOPClass()
 				outputDebugString("[DGS]Failed to load custom OOP script (Could not find "..list[i]..")",1)
 			end
 		end
-		fileClose(customOOPFileList)
 	end
-	OOPClassString = str
-end
-loadOOPClass()
-
-function dgsImportOOPClass()
-	return OOPClassString
+	OOPImportCache = str
+	OOPImportTimer = setTimer(function()
+		OOPImportCache = nil
+		OOPImportTimer = nil
+		collectgarbage()
+	end,1000,1) --Clear cache
+	return OOPImportCache
 end

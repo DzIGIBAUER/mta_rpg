@@ -1,3 +1,5 @@
+dgsLogLuaMemory()
+dgsRegisterPluginType("dgs-dxmask")
 masks = {
 	circle="plugin/mask/mask-Circle.fx",
 	backgroundFilter="plugin/mask/mask-BackGroundFilter.fx",
@@ -6,7 +8,8 @@ masks = {
 
 function dgsCreateMask(texture1,texture2,settings)
 	settings = settings or {}
-	if not(dgsGetType(texture1) == "texture") then error(dgsGenAsrt(texture1,"dgsCreateMask",1,"texture")) end
+	local tex1Type = dgsGetType(texture1)
+	if not(isMaterial(texture1) == "texture") then error(dgsGenAsrt(texture1,"dgsCreateMask",1,"texture")) end
 	local tex2Type = dgsGetType(texture2)
 	local maskResult
 	if tex2Type == "string" then
@@ -20,7 +23,7 @@ function dgsCreateMask(texture1,texture2,settings)
 		end
 		dgsSetData(maskResult,"asPlugin","dgs-dxmask")
 		triggerEvent("onDgsPluginCreate",maskResult,sourceResource)
-	elseif tex2Type == "texture" then
+	elseif tex2Type == "texture" or tex2Type == "svg" then
 		maskResult = dxCreateShader("plugin/mask/maskTexture.fx")
 		dgsSetData(maskResult,"sourceTexture",texture1)
 		dxSetShaderValue(maskResult,"sourceTexture",texture1)
