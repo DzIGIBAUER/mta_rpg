@@ -103,6 +103,8 @@ end
 -- @param element element: Element koju dodajemo.
 -- @param[opt] pokreni bool: Da li treba da zakazemo pokretanje 'handler_function' nakon dodavanja elementa.
 function Buffer:append_element(element, pokreni)
+    if pokreni == nil then pokreni = true end
+    
     if getElementType(element) ~= self.element_type then
         return error(string.format('Greska, ocekivan element sa tipom "%s", a dobijen "%s"', self.element_type, getElementType(element) or "nepoznat"))
     end
