@@ -7,7 +7,7 @@ local function _igrac_diskonektovan(quit_type)
     local id = getElementData(source, "id", false)
     if quit_type == "banned" or not id then return end -- ako je banovan ili nije ulogovan bas nas briga
 
-    local db = exports["dbSistem"].get_connection()
+    local db = exports.dbSistem.get_connection()
     if not db then 
         return
     end
@@ -65,7 +65,7 @@ addEventHandler("igracSistem:igracUlogovan", root, _stvori_igraca)
 
 --- Menja skin igraca i cuva ga u bazi podataka.
 -- @param model_id int: ID skina 'https://wiki.multitheftauto.com/wiki/Character_Skins'.
-local function namesti_skin_igraca(model_id)
+local function _namesti_skin_igraca(model_id)
     if getElementType(source) ~= "player" or not getElementData(source, "id", false) then
         return outputDebugString("source mora da bude ulogovan igrac")
     end
@@ -87,13 +87,14 @@ local function namesti_skin_igraca(model_id)
         return outputDebugString(string.format("Ne postoji model sa tim ID-em(%s).", model_id))
     end
 
-    local db = exports["dbSistem"].get_connection()
+    local db = exports.dbSistem.get_connection()
     if not db then 
         outputDebugString("Ne mozemo da azuriramo skin igraca jer veza ka bazi podataka nije ostvarena.")
+        return
     end
 
     dbExec(db, "UPDATE `igrac` SET `model_id` = ? WHERE `id` = ?", model_id, getElementData(source, "id", false))
     setElementModel(source, model_id)
 end
 addEvent("igracSistem:promeniSkin")
-addEventHandler("igracSistem:promeniSkin", root, namesti_skin_igraca)
+addEventHandler("igracSistem:promeniSkin", root, _namesti_skin_igraca)
