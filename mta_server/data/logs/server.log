@@ -1,0 +1,161 @@
+==================================================================
+= Multi Theft Auto: San Andreas v1.5.9 [64 bit]
+==================================================================
+= Server name      : Default MTA Server
+= Server IP address: auto
+= Server port      : 22003
+= 
+= Log file         : /mtasa/mods/deathmatch/logs/server.log
+= Maximum players  : 32
+= HTTP port        : 22005
+= Voice Chat       : Disabled
+= Bandwidth saving : Medium
+==================================================================
+[22-05-10 14:53:40] File 'settings.xml' not present, creating new node.
+[22-05-10 14:53:45] Resource 'dgs' requests some acl rights. Use the command 'aclrequest list dgs'
+[22-05-10 14:54:43] Resource 'nalogSistem' requests some acl rights. Use the command 'aclrequest list nalogSistem'
+[22-05-10 14:54:45] Resources: 8 loaded, 0 failed
+[22-05-10 14:54:45] Starting resources...
+[22-05-10 14:54:45] ERROR: Couldn't find resource admin. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource defaultstats. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource helpmanager. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource joinquit. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource mapcycler. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource mapmanager. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource parachute. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource performancebrowser. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource ipb. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource reload. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource resourcebrowser. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource resourcemanager. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource scoreboard. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource spawnmanager. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource voice. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource votemanager. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource webadmin. Check it exists.
+[22-05-10 14:54:45] ERROR: Couldn't find resource play. Check it exists.
+[22-05-10 14:54:45] Server started and is ready to accept connections!
+[22-05-10 14:54:45] To stop the server, type 'shutdown' or press Ctrl-C
+[22-05-10 14:54:45] Type 'help' for a list of commands.
+[22-05-10 14:54:48] Querying MTA master server... success! (Auto detected IP:77.243.25.226)
+==================================================================
+= Multi Theft Auto: San Andreas v1.5.9 [64 bit]
+==================================================================
+= Server name      : Default MTA Server
+= Server IP address: auto
+= Server port      : 22003
+= 
+= Log file         : /mtasa/mods/deathmatch/logs/server.log
+= Maximum players  : 32
+= HTTP port        : 22005
+= Voice Chat       : Disabled
+= Bandwidth saving : Medium
+==================================================================
+[22-05-10 15:26:39] Resource 'dgs' requests some acl rights. Use the command 'aclrequest list dgs'
+[22-05-10 15:26:43] Resource 'nalogSistem' requests some acl rights. Use the command 'aclrequest list nalogSistem'
+[22-05-10 15:26:43] Resources: 8 loaded, 0 failed
+[22-05-10 15:26:44] Starting resources...
+[22-05-10 15:26:44] ERROR: Couldn't find resource admin. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource defaultstats. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource helpmanager. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource joinquit. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource mapcycler. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource mapmanager. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource parachute. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource performancebrowser. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource ipb. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource reload. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource resourcebrowser. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource resourcemanager. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource scoreboard. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource spawnmanager. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource voice. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource votemanager. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource webadmin. Check it exists.
+[22-05-10 15:26:44] ERROR: Couldn't find resource play. Check it exists.
+[22-05-10 15:26:44] Server started and is ready to accept connections!
+[22-05-10 15:26:44] To stop the server, type 'shutdown' or press Ctrl-C
+[22-05-10 15:26:44] Type 'help' for a list of commands.
+[22-05-10 15:26:45] Querying MTA master server... success! (Auto detected IP:77.243.25.226)
+==================================================================
+= Multi Theft Auto: San Andreas v1.5.9 [64 bit]
+==================================================================
+= Server name      : Default MTA Server
+= Server IP address: auto
+= Server port      : 22003
+= 
+= Log file         : /mtasa/mods/deathmatch/logs/server.log
+= Maximum players  : 32
+= HTTP port        : 22005
+= Voice Chat       : Disabled
+= Bandwidth saving : Medium
+==================================================================
+[22-05-11 12:49:33] Resource 'dgs' requests some acl rights. Use the command 'aclrequest list dgs'
+[22-05-11 12:49:38] Resource 'nalogSistem' requests some acl rights. Use the command 'aclrequest list nalogSistem'
+[22-05-11 12:49:39] Resources: 8 loaded, 0 failed
+[22-05-11 12:49:39] Starting resources...
+[22-05-11 12:49:39] ERROR: Couldn't find resource admin. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource defaultstats. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource helpmanager. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource joinquit. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource mapcycler. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource mapmanager. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource parachute. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource performancebrowser. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource ipb. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource reload. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource resourcebrowser. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource resourcemanager. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource scoreboard. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource spawnmanager. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource voice. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource votemanager. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource webadmin. Check it exists.
+[22-05-11 12:49:39] ERROR: Couldn't find resource play. Check it exists.
+[22-05-11 12:49:39] Server started and is ready to accept connections!
+[22-05-11 12:49:39] To stop the server, type 'shutdown' or press Ctrl-C
+[22-05-11 12:49:39] Type 'help' for a list of commands.
+[22-05-11 12:49:42] Querying MTA master server... success! (Auto detected IP:37.19.108.72)
+[22-05-11 12:50:00] == Resource list ==
+[22-05-11 12:50:00] actionBufferSistem     STOPPED   (8 files)
+[22-05-11 12:50:00] dbSistem               STOPPED   (2 files)
+[22-05-11 12:50:00] dgs                    STOPPED   (99 files)
+[22-05-11 12:50:00] igracSistem            STOPPED   (6 files)
+[22-05-11 12:50:00] nalogSistem            STOPPED   (3 files)
+[22-05-11 12:50:00] salonVozilaSistem      STOPPED   (4 files)
+[22-05-11 12:50:00] test                   STOPPED   (2 files)
+[22-05-11 12:50:00] voziloSistem           STOPPED   (1 files)
+[22-05-11 12:50:00] Resources: 8 loaded, 0 failed, 0 running
+[22-05-11 12:54:24] == Resource list ==
+[22-05-11 12:54:24] actionBufferSistem     STOPPED   (8 files)
+[22-05-11 12:54:24] dbSistem               STOPPED   (2 files)
+[22-05-11 12:54:24] dgs                    STOPPED   (99 files)
+[22-05-11 12:54:24] igracSistem            STOPPED   (6 files)
+[22-05-11 12:54:24] nalogSistem            STOPPED   (3 files)
+[22-05-11 12:54:24] salonVozilaSistem      STOPPED   (4 files)
+[22-05-11 12:54:24] test                   STOPPED   (2 files)
+[22-05-11 12:54:24] voziloSistem           STOPPED   (1 files)
+[22-05-11 12:54:24] Resources: 8 loaded, 0 failed, 0 running
+[22-05-11 12:54:34] * Syntax: start <resource-name>
+[22-05-11 12:54:45] CONSOLECHAT: mozes
+[22-05-11 12:54:50] help [command]
+[22-05-11 12:54:50] Available commands:
+
+start                    stop                     stopall                  
+restart                  refresh                  refreshall               
+list                     info                     upgrade                  
+check                    say                      teamsay                  
+msg                      me                       nick                     
+login                    logout                   chgmypass                
+addaccount               delaccount               chgpass                  
+shutdown                 aexec                    whois                    
+debugscript              help                     loadmodule               
+unloadmodule             reloadmodule             ver                      
+sver                     ase                      openports                
+debugdb                  reloadbans               aclrequest               
+authserial               reloadacl                debugjoinflood           
+debuguptime              sfakelag                 
+[22-05-11 12:54:57] SHUTDOWN: Got shutdown command from Console (No reason specified)
+[22-05-11 12:54:58] Server stopped!
+[22-05-11 12:54:58] Stopping resources...
+[22-05-11 12:54:58] Closing SQLite3 database

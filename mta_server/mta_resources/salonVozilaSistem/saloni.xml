@@ -1,0 +1,21 @@
+<!-- Resurs config fajl sa cenama i tipovima vozila -->
+<root>
+
+    <vozilaconf>
+        <bikes>
+            <vozilo m_id="581" cena="45000" />
+            <vozilo m_id="509" cena="2000" />
+            <vozilo m_id="481" cena="7000" />
+            <vozilo m_id="462" cena="8000" />
+            <vozilo m_id="521" cena="60000" />
+            <vozilo m_id="463" cena="25000" />
+            <vozilo m_id="510" cena="7200" />
+            <vozilo m_id="522" cena="135000" />
+            <vozilo m_id="461" cena="60000" />
+            <vozilo m_id="448" cena="7500" />
+            <vozilo m_id="468" cena="18000" />
+            <vozilo m_id="586" cena="17000" />
+        </bikes>
+    </vozilaconf>
+
+</root>

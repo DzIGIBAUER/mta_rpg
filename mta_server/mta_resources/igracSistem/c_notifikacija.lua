@@ -10,7 +10,7 @@ local tip_notifikacije = {
 }
 
 -- https://gist.github.com/marceloCodget/3862929#gistcomment-3729315
-function rgbToHex(r, g, b)
+local function rgbToHex(r, g, b)
     -- EXPLANATION:
     -- The integer form of RGB is 0xRRGGBB
     -- Hex for red is 0xRR0000
