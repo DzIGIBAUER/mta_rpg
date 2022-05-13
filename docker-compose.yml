@@ -1,0 +1,17 @@
+version: "3"
+services:
+  mta-server:
+    image: notfound/mtasa-server:latest
+    container_name: mta_server
+
+    stdin_open: true # https://stackoverflow.com/a/39150040
+    tty: true
+    
+    ports:
+      - 22005:22005
+      - "22003:22003/udp"
+      - "22126:22126/udp"
+    volumes:
+      - ./mta_server/data:/data
+      - ./mta_server/resources:/resources
+      - ./mta_server/modules:/native-modules

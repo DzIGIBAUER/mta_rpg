@@ -1,4 +1,4 @@
-[gamemode]/dbSistem/s_config.lua
+/mta_server/resources/test/
 
-*/test/**
-test*
+/mta_server/data/
+!/mta_server/data/mtaserver.conf
