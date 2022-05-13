@@ -2,3 +2,5 @@
 
 /mta_server/data/
 !/mta_server/data/mtaserver.conf
+
+*.env

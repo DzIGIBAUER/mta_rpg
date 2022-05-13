@@ -15,3 +15,8 @@ services:
       - ./mta_server/data:/data
       - ./mta_server/resources:/resources
       - ./mta_server/modules:/native-modules
+    environment:
+      - DB_HOST=${DB_HOST?:Env var DB_HOST nije namešten.}
+      - DB_USER=${DB_USER?:Env var DB_USER nije namešten.}
+      - DB_NAME=${DB_NAME?:Env var DB_NAME nije namešten.}
+      - DB_PASS=${DB_PASS?:Env var DB_PASS nije namešten.}
