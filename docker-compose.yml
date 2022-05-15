@@ -22,7 +22,6 @@ services:
       - DB_PASS=${DB_PASS?Env var DB_PASS nije namešten.}
     depends_on:
       - mysql-server
-    command: ["echo", "sta se desava", "&&", "/mtasa/mods/deathmatch/scripts/wait-for", "${DB_HOST}:3306", "--", "echo", "DOBRO JEEEEEEEEE"]
 
   mysql-server:
     image: mysql:latest
@@ -41,3 +40,10 @@ services:
       - MYSQL_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD}
       - MYSQL_ONETIME_PASSWORD=${MYSQL_ONETIME_PASSWORD}
       - MYSQL_INITDB_SKIP_TZINFO=${MYSQL_INITDB_SKIP_TZINFO}
+    
+    healthcheck:
+      test: ["/bin/bash", 'mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --execute="SELECT count(table_name) > 0 FROM information_schema.tables;" --skip-column-names -B']
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
