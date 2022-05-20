@@ -24,8 +24,16 @@ services:
       - mysql-server
 
   mysql-server:
-    image: mysql:latest
+    image: mysql
     container_name: mysql_server
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+      - MYSQL_ALLOW_EMPTY_PASSWORD
+      - MYSQL_ONETIME_PASSWORD
+      - MYSQL_INITDB_SKIP_TZINFO
 
     ports:
       - 3306:3306
@@ -33,7 +41,7 @@ services:
       - ./mysql_server/data:/var/lib/mysql
     
     healthcheck:
-      test: ["/bin/bash", "mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --port=3306 --execute='SELECT 1;'"]
+      test: ["CMD", "mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --port=3306 --execute='SELECT 1;'"]
       interval: 30s
       timeout: 30s
       retries: 5

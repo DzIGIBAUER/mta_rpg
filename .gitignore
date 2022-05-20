@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-mta_server/mta_resources/dbSistem/s_config.lua
-=======
 /mta_server/resources/test/
->>>>>>> mta-server-docker
 
 /mysql_server/
 
