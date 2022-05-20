@@ -1,0 +1,40 @@
+version: "3"
+services:
+  mta-server:
+    image: notfound/mtasa-server:latest
+    container_name: mta_server
+
+    stdin_open: true # https://stackoverflow.com/a/39150040
+    tty: true
+    
+    ports:
+      - 22005:22005
+      - "22003:22003/udp"
+      - "22126:22126/udp"
+    volumes:
+      - ./mta_server/data:/data
+      - ./mta_server/resources:/resources
+      - ./mta_server/modules:/native-modules
+    environment:
+      - DB_HOST=${DB_HOST?:Env var DB_HOST nije namešten.}
+      - DB_USER=${DB_USER?:Env var DB_USER nije namešten.}
+      - DB_NAME=${MYSQL_DATABASE?:Env var MYSQL_DATABASE nije namešten.}
+      - DB_PASS=${DB_PASS?Env var DB_PASS nije namešten.}
+    depends_on:
+      - mysql-server
+
+  mysql-server:
+    image: mysql:latest
+    container_name: mysql_server
+
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mysql_server/data:/var/lib/mysql
+    
+    healthcheck:
+      test: ["/bin/bash", "mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --port=3306 --execute='SELECT 1;'"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s

@@ -1,8 +1,0 @@
-<meta>
-
-    <script src="s_db.lua" type="server" />
-    <script src="s_config.lua" type="server"/>
-
-    <export function="get_connection" type="server" />
-
-</meta>
