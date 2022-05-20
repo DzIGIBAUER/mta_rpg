@@ -5,18 +5,26 @@ local trenutno_prikazano_vozilo
 local gui = {}
 
 
-
+--- Sklanja/prikazuje kursor i iskljucuje/ukljucuje kontrole igraca.
+-- @param[opt] enabled bool: Da li kontrole treba ukljuciti ili iskljuciti.
 local function set_controls_state(enabled)
     showCursor(not enabled)
     toggleAllControls(enabled, true, false)
 end
 
 
+--- Salje event serveru da igrac zeli da kupi vozilo.
+-- @param salon element: Salon u kom igrac kupuje.
+-- @param vozilo_index int: Id vozila u tom salonu.
 local function kupi_vozilo(salon, vozilo_index)
     triggerServerEvent("salonVozilaSistem:igracKupujeVozilo", localPlayer, salon, vozilo_index)
 end
 
 
+--- Menja boju cene vozila u odnosu na to da li igrac ima vise, manje ili tacno onliko novca koliko je potrebno
+-- za kupovinu trenutno prikazanog vozila.
+-- @param label dgs element: Label kojim je prikazana cena.
+-- @param cena int: cena vozila.
 local function set_cena_label_color(label, cena)
     if cena == getPlayerMoney() then
         dgsSetProperty(label, "textColor", tocolor(255, 0, 255))
@@ -27,7 +35,9 @@ local function set_cena_label_color(label, cena)
     end
 end
 
-
+--- Menja trenutno prikazano vozilo u salonu.
+-- @param salon element: Salon u kom se trenutno igrac nalazi.
+-- @param smer int: Da li prikazujemo sledece vozila veceg ili manjeg id-a. (1 ili -1).
 local function promeni_prikaz(salon, smer)
     smer = smer or 1
     local novi_idx
@@ -58,6 +68,8 @@ local function promeni_prikaz(salon, smer)
 end
 
 
+--- Prikazuje GUI salona vozila.
+-- @param salon element: Salon ciji GUI prikazujemo.
 -- TODO: titleHeight sjebava sve.
 local function prikazi_gui_salona(salon)
     gui.window = dgsCreateWindow(0.20, 0.80, 0.60, 0.20, "Salon", true)
@@ -109,7 +121,7 @@ local function prikazi_gui_salona(salon)
 end
 
 
-
+--- Uzima informacije salona u ciji smo marker usli.
 local function _marker_hit(hit_player, matching_dimension)
     if hit_player ~= localPlayer or not matching_dimension or getPedOccupiedVehicle(localPlayer) then return end
 
@@ -148,7 +160,6 @@ local function _marker_hit(hit_player, matching_dimension)
 
 end
 addEventHandler("onClientMarkerHit", resourceRoot, _marker_hit)
-
 
 
 

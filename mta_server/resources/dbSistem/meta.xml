@@ -4,4 +4,12 @@
 
     <export function="get_connection" type="server" />
 
+    <settings>
+        <setting
+            name="@dbSistem.retry_delay"
+            value="5000"
+            decs="Posle koliko vremena ce resurs probati da se rekonektuje ako nije predhodno povezivanje nije bilo uspesno" 
+        />
+    </settings>
+
 </meta>

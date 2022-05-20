@@ -5,7 +5,9 @@ local func_buff_mngr = Buffer.new(200, "player")
 local vozila_salona = {}
 
 
-
+-- Triggeruje-se kada igrac zeli da kupi vozilo sa id-em vozilo_index u salonu.
+-- @param salon element: Salon gde igrac kupuje.
+-- @param vozilo_index int: Id vozila u salonu.
 local function _igrac_kupuje_vozilo(salon, vozilo_index)
     if not client or source ~= client then return end
 
@@ -33,6 +35,11 @@ addEvent("salonVozilaSistem:igracKupujeVozilo", true)
 addEventHandler("salonVozilaSistem:igracKupujeVozilo", root, _igrac_kupuje_vozilo)
 
 
+--- Zahtev za azuriranje informacije vozila u bazi podataka je gotov.
+-- @param vlasnik player: Igrac cije je vozilo.
+-- @param new_client_veh_data table: Informacije vozila igraca iz baze podataka.
+-- @param new_veh_id int: Id zadnjeg reda iz baze podataka.
+-- @param cena_vozila: Cena vozila koje je kupljeno(dodato u db).
 local function _vozilo_db_query_finished(vlasnik, new_client_veh_data, new_veh_id, cena_vozila)
     local veh_data
 
@@ -64,7 +71,7 @@ addEvent("voziloSistem:voziloDBQuery", false)
 addEventHandler("voziloSistem:voziloDBQuery", resourceRoot, _vozilo_db_query_finished)
 
 
-
+--- Ucitava informacije salona iz saloni.xml fajla.
 local function _resurs_pokrenut(_resurs)
     local config_root = getResourceConfig(":salonVozilaSistem/saloni.xml")
     assert(config_root, string.format("Config fajl '%s' nije pronadjen.", "saloni.xml"))
@@ -94,7 +101,7 @@ local function _resurs_pokrenut(_resurs)
 end
 addEventHandler("onResourceStart", resourceRoot, _resurs_pokrenut)
 
-
+--- Salje informacije salona igracu.
 local function posalji_salon_info(clients)
     triggerClientEvent(clients, "salonVozilaSistem:serverPoslaoSalonInfo", resourceRoot, vozila_salona)
 end

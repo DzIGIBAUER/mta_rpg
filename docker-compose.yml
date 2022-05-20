@@ -31,18 +31,9 @@ services:
       - 3306:3306
     volumes:
       - ./mysql_server/data:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_ALLOW_EMPTY_PASSWORD=${MYSQL_ALLOW_EMPTY_PASSWORD}
-      - MYSQL_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD}
-      - MYSQL_ONETIME_PASSWORD=${MYSQL_ONETIME_PASSWORD}
-      - MYSQL_INITDB_SKIP_TZINFO=${MYSQL_INITDB_SKIP_TZINFO}
     
     healthcheck:
-      test: ["/bin/bash", 'mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --execute="SELECT count(table_name) > 0 FROM information_schema.tables;" --skip-column-names -B']
+      test: ["/bin/bash", "mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --port=3306 --execute='SELECT 1;'"]
       interval: 30s
       timeout: 30s
       retries: 5
