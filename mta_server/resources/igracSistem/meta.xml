@@ -1,6 +1,6 @@
 <meta>
 
-    <script src="preferences/XmlComparator.lua" type="client" />
+    <script src="preferences/XMLComparator.lua" type="client" />
     <script src="c_notifikacija.lua" type="client" />
     
     <script src="preferences/userBinds/c_binds.lua" type="client"/>
