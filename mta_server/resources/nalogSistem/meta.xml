@@ -1,13 +1,15 @@
 <meta>
 
     <script src="c_nalog.lua" type="client" />
-    <script src="c_config.lua" type="client" />
     <script src="s_nalog.lua" type="server" />
 
-    <export function="auth_user" type="server" http="true" />
+    <settings>
+        <setting name="@nalogSistem.minPassLength" value="4" />
 
-    <aclrequest>
-        <right name="function.kickPlayer" access="true" />
-    </aclrequest>
+        <setting name="@nalogSistem.maxUserLength" value="32" />
+        <setting name="@nalogSistem.minUserLength" value="4" />
+    </settings>
+
+    <min_mta_version server="1.5.8-9.20957" />
 
 </meta>

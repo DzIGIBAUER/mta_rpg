@@ -1,123 +1,216 @@
 loadstring(exports.dgs:dgsImportFunction())()
 
-local auth_code
-local gui = {}
-local browser_ucitan
+
+local UI = {
+    REGISTER = 0,
+    LOGIN = 1,
+}
+
+local prikazan_ui = UI.REGISTER
+local switch_duration = 150 -- ms
+
+local gui = {
+    login = {},
+    register = {},
+}
 
 
---- Ucitava sajt za autorizaciju i salje mu 'auth_code'.
-local function ucitaj_auth_sajt()
-    local post_data = toJSON({mta_auth_code = auth_code}):sub(2, -2)
-    loadBrowserURL(gui.browser, AUTH_URL, post_data, false)
-    dgsBringToFront(gui.browser)
-end
+--[[ POLICY ]]
+local policy -- tabela. Od servera dobijemo min_pass_length, maxPassLength, min_user_length, max_user_lenght
 
 
---- Odlucuje koji je sledeci korak na osnovu toga da li je
--- pretrazivac ucitan i da li nam je server poslao 'auth_code'.
--- Ako jeste ucitavamo sajt za autorizaciju.
-local function next_step_manager()
-    if not browser_ucitan or not auth_code or isBrowserDomainBlocked(AUTH_URL, true) then
-        return
-    end
-
-    ucitaj_auth_sajt()
-
-end
-
-
---- Trazi od igraca da odobri pristup sajtu za autorizaciju.
--- Ako je igrac prihvatio pozvan je 'next_step_manager'.
--- @param url string: URL na kom se nalazi sajt.
-local function zatrazi_dozvolu(url)
-    if not isBrowserDomainBlocked(url, true) then
-        next_step_manager()
-        return 
-    end
-
-    requestBrowserDomains({url}, true,    
-    function(prihvaceno, _)
-        if prihvaceno then
-            destroyElement(gui.button)
-            dgsSetText(gui.label, "Uskoro će se učitati sajt za autorizaciju. Barem bi trebalo...")
-            next_step_manager()
-        end
-    end
-)
-
-end
-
-
---- Prikazuje igracu dugme na ciji klik mu se pokrece 'zatrazi_dozvolu' i
--- poruku u kojij pise da mora da prihvati da bi nastavio dalje.
--- @param url string: URL satja za autorizaciju.
-local function sredi_dozvolu(url)
-    if isBrowserDomainBlocked(url, true) then
-        local poruka = "Da bi mogli da nastavite morate da dozvolite pristup sajtu na adresi "
-            ..url..
-            ".\nTo možete učiniti i u Settings -> Web Browser -> Custom Whitelist."
-        dgsSetText(gui.label, poruka)
-
-        gui.button = dgsCreateButton(0.45, 0.51, 0.1, 0.05, "Dozvoli", true, gui.window)
-
-        addEventHandler("onDgsMouseClickUp", gui.button,
-            function(mouse_button)
-                if mouse_button ~= "left" then return end
-                zatrazi_dozvolu(url)
-            end,
-        false)
+--- Animira menjanje teksta u dgs label-u.
+-- @param label dgs label: Label ciji tekst menjamo.
+-- @param novi_text string: novi_tekst.
+local function fade_change_text(label, novi_text)
+    dgsAlphaTo(label, 0, false, "Linear", switch_duration)
+    if novi_text and novi_text ~= "" then
+        setTimer(function()
+            dgsSetText(label, novi_text)
+            dgsAlphaTo(label, 1, false, "Linear", switch_duration)
+        end, switch_duration, 1)
     end
 end
 
---- Sakriva chat, kursor i iskljucuje komande igraca; Kreira pretrazivac u kom ce igrac da se uloguje/registuje;
--- Kreira prozor u kom su mu prikazane istrukcije za nastavak.
-local function _resurs_pokrenut(_srated_resource)
 
+--- Prikazuje/sakriva login UI.
+-- @param[opt] prikazi bool: Da li da ga prikaze ili sakrije.
+local function prikazi_login_ui(prikazi)
+    if prikazi == nil then prikazi = true end
+
+    if prikazi then
+        prikazan_ui = UI.LOGIN
+        fade_change_text(gui.header_label, "Login")
+        dgsSetText(gui.switch_button, "Registruj se")
+        fade_change_text(gui.tip_label, "Nemate nalog? Registrujte se.")
+    end
+
+    for _, element in pairs(gui.login) do
+        dgsSetVisible(element, prikazi)
+    end
+end
+
+
+--- Prikazuje/sakriva register UI.
+-- @param[opt] prikazi bool: Da li da ga prikaze ili sakrije.
+local function prikazi_register_ui(prikazi)
+    if prikazi == nil then prikazi = true end
+
+    if prikazi then
+        prikazan_ui = UI.REGISTER
+        fade_change_text(gui.header_label, "Registracija")
+        dgsSetText(gui.switch_button, "Login")
+        fade_change_text(gui.tip_label, "Već imate nalog? Prijavite se.")
+    end
+
+    for _, element in pairs(gui.register) do
+        dgsSetVisible(element, prikazi)
+    end
+end
+
+--- Menja trenutno prikazan UI izmedju LOGIN i REGISTER
+local function switch_ui()
+    local r_state -- da li treba da prikazemo register UI, login UI ce da bude kontra
+
+    if prikazan_ui == UI.LOGIN then
+        r_state = true
+
+    else
+        r_state = false
+    end
+    
+    prikazi_register_ui(r_state)
+    prikazi_login_ui(not r_state)
+end
+
+--- Handler za login dugme.
+local function _login()
+    dgsSetText(gui.poruka_label, "")
+
+    local username = dgsGetText(gui.login.user_edit)
+    local lozinka = dgsGetText(gui.login.pass_label)
+
+    triggerServerEvent("igracSistem:loginPokusaj", resourceRoot, username, lozinka)
+end
+
+local function _register()
+    dgsSetText(gui.poruka_label, "")
+
+    local username = dgsGetText(gui.register.user_edit)
+    local lozinka = dgsGetText(gui.register.pass_label)
+    local lozinka_potvrda = dgsGetText(gui.register.pass_confirm_edit)
+
+    -- ove provere imamo i na strani servera za slucaj da korisnik pokusa da ih zaobidje ovde
+    if #username < policy.min_user_length or #username > policy.max_user_lenght then
+        return triggerEvent(
+            "igracSistem:registracijeNeuspesna",
+            localPlayer,
+            string.format("Korisničko ime mora da bude duže od %s a kraće od %s karaktera.", policy.min_user_length, policy.max_user_lenght)
+        )
+    end
+
+    if #lozinka < policy.min_pass_length or #username > policy.maxPassLength then
+        return triggerEvent(
+            "igracSistem:registracijeNeuspesna",
+            localPlayer,
+            string.format("Lozinka mora da bude duža od %s karaktera.", policy.min_pass_length)
+        )
+    end
+
+    if lozinka ~= lozinka_potvrda then
+        return triggerEvent(
+            "igracSistem:registracijeNeuspesna",
+            localPlayer,
+            "Lozinke se ne podudaraju."
+        )
+    end
+
+    triggerServerEvent("igracSistem:registerPokusaj", resourceRoot, username, lozinka)
+end
+
+
+local function _login_uspesan()
+    destroyElement(gui.window)
+    gui = nil
+    showCursor(false)
+end
+addEvent("igracSistem:loginNeuspesan", true)
+addEventHandler("igracSistem:loginNeuspesan", localPlayer, _login_uspesan)
+
+local function _login_neuspesan(poruka)
+    dgsLabelSetColor(gui.poruka_label, 255, 50, 50, 255)
+    dgsSetText(gui.poruka_label, poruka)
+end
+addEvent("igracSistem:loginUspesan", true)
+addEventHandler("igracSistem:loginUspesan", localPlayer, _login_neuspesan)
+
+
+local function _registracija_uspesna()
+    prikazi_login_ui(true)
+    prikazi_register_ui(false)
+    dgsLabelSetColor(gui.poruka_label, 50, 255, 50, 255)
+    dgsSetText(gui.poruka_label, "Uspesno ste registrovani, sada možete da se ulogujete.")
+end
+addEvent("igracSistem:registracijeUspesna", true)
+addEventHandler("igracSistem:registracijeUspesna", localPlayer, _registracija_uspesna)
+
+local function _registracija_nesupesna(poruka)
+    dgsLabelSetColor(gui.poruka_label, 255, 50, 50, 255)
+    dgsSetText(gui.poruka_label, poruka)
+end
+addEvent("igracSistem:registracijeNeuspesna", true)
+addEventHandler("igracSistem:registracijeNeuspesna", localPlayer, _registracija_nesupesna)
+
+
+local function prikazi_welcome_screen()
+    local sirina, visina = dgsGetScreenSize()
+
+    showChat(false)
     showCursor(true, true)
-    toggleAllControls(false, true, true)
-    showChat(false, true)
+    gui.window = dgsCreateWindow(0, 0, sirina, visina, "", false, nil, nil, nil, nil, nil, nil, nil, true)
+    dgsSetProperty(gui.window, "movable", false)
+    dgsSetProperty(gui.window, "sizable", false)
+    dgsSetProperty(gui.window, "titleHeight", 0)
+
+    gui.header_label = dgsCreateLabel(0.1, 0.20, 0.25, 0.1, "LOGIN", true, gui.window, nil, 2, 2, nil, nil, nil, "left", "center")
+
+    -- [[ LOGIN ]]
+    gui.login.user_label = dgsCreateLabel(0.1, 0.3, 0.25, 0.04, "Korisnicko ime", true, gui.window)
+    gui.login.user_edit = dgsCreateEdit(0.1, 0.33, 0.25, 0.04, "", true, gui.window)
+
+    gui.login.pass_label = dgsCreateLabel(0.1, 0.38, 0.25, 0.04, "Lozinka", true, gui.window)
+    gui.login.pass_edit = dgsCreateEdit(0.1, 0.41, 0.25, 0.04, "", true, gui.window)
+
+    gui.login.button = dgsCreateButton(0.1, 0.49, 0.25, 0.04, "Login", true, gui.window)
+
+    -- [[ REGISTER ]]
+    gui.register.user_label = dgsCreateLabel(0.1, 0.3, 0.25, 0.04, "Korisnicko ime", true, gui.window)
+    gui.register.user_edit = dgsCreateEdit(0.1, 0.33, 0.25, 0.04, "", true, gui.window)
+
+    gui.register.pass_label = dgsCreateLabel(0.1, 0.38, 0.25, 0.04, "Lozinka", true, gui.window)
+    gui.register.pass_edit = dgsCreateEdit(0.1, 0.41, 0.25, 0.04, "", true, gui.window)
+
+    gui.register.pass_confirm_label = dgsCreateLabel(0.1, 0.46, 0.25, 0.04, "Potvrdi lozinku", true, gui.window)
+    gui.register.pass_confirm_edit = dgsCreateEdit(0.1, 0.49, 0.25, 0.04, "", true, gui.window)
+
+    gui.register.button = dgsCreateButton(0.1, 0.56, 0.25, 0.04, "Registruj nalog", true, gui.window)
 
 
-    gui.browser = dgsCreateBrowser(0, 0, 1, 1, true)
-    addEventHandler("onClientBrowserCreated", gui.browser,
-        function()
-            browser_ucitan = true
-            next_step_manager()
-        end
-    )
+    gui.poruka_label = dgsCreateLabel(0.1, 0.62, 0.25, 0.08, "", true, gui.window)
 
+    gui.switch_button = dgsCreateButton(0.1, 0.70, 0.12, 0.04, "Registruj se", true, gui.window)
+    gui.tip_label = dgsCreateLabel(0.1, 0.74, 0.25, 0.04, "Nemate nalog? Registrujte se.", true, gui.window)
 
-    gui.window = dgsCreateWindow(0, 0, 1, 1, "", true, nil, 0, nil, nil, nil, nil, 1, true)
-    gui.label = dgsCreateLabel(0, 0, 1, 0.5, "", true, gui.window)
-    dgsLabelSetHorizontalAlign(gui.label, "center")
-    dgsLabelSetVerticalAlign(gui.label, "bottom")
+    switch_ui()
 
-    sredi_dozvolu(AUTH_URL)
+    addEventHandler("onDgsMouseClickUp", gui.switch_button, switch_ui, false)
 
+    addEventHandler("onDgsMouseClickUp", gui.login.button, _login, false)
+    addEventHandler("onDgsMouseClickUp", gui.register.button, _register, false)
 end
-addEventHandler("onClientResourceStart", resourceRoot, _resurs_pokrenut)
 
-
-
-
-
-local function pokreni_auth(code)
-    auth_code = code
-
-    next_step_manager()
-end
-addEvent("nalogSistem:ServerPoslaoAuthCode", true)
-addEventHandler("nalogSistem:ServerPoslaoAuthCode", resourceRoot, pokreni_auth)
-
-local function _auth_gotov()
-    for _key, element in pairs(gui) do
-        if isElement(element) then destroyElement(element) end
-    end
-
-    showCursor(false, false)
-    showChat(true, false)
-    toggleAllControls(true, true, true)
-
-end
-addEvent("igracSistem:authGotov", true)
-addEventHandler("igracSistem:authGotov", localPlayer, _auth_gotov)
+addEvent("igracSistem:clientPolicyInfo", true)
+addEventHandler("igracSistem:clientPolicyInfo", resourceRoot, function(policy_settings)
+    policy = policy_settings
+    prikazi_welcome_screen()
+end)
