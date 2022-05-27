@@ -17,7 +17,7 @@ local function _igrac_diskonektovan(quit_type)
 
     dbExec(
         db,
-        "UPDATE `nalog_igrac` SET `novac` = ?, `pos_x` = ?, `pos_y` = ?, `pos_z` = ?, `rot_x` = ?, `rot_y` = ?, `rot_z` = ? WHERE `id`= ?",
+        "UPDATE nalog SET novac = ?, pos_x = ?, pos_y = ?, pos_z = ?, rot_x = ?, rot_y = ?, rot_z = ? WHERE id= ?",
         getPlayerMoney(source), pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, id
     )
 end
@@ -93,7 +93,7 @@ local function _namesti_skin_igraca(model_id)
         return
     end
 
-    dbExec(db, "UPDATE `igrac` SET `model_id` = ? WHERE `id` = ?", model_id, getElementData(source, "id", false))
+    dbExec(db, "UPDATE igrac SET model_id = ? WHERE id = ?", model_id, getElementData(source, "id", false))
     setElementModel(source, model_id)
 end
 addEvent("igracSistem:promeniSkin")

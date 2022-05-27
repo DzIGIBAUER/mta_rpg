@@ -21,15 +21,15 @@ local zauzeti_bindovi = {}
 -- @param dugme string: Dugme sa kojim se povezuje exportovana funkcija.
 -- @param function_name string: Ime exportovane funkcije.
 local function namesti_novi_resurs_bind(resource, dugme, function_name)
-    local hadnler_function = exports[getResourceName(resource)][function_name]
+    local handler_function = exports[getResourceName(resource)][function_name]
 
     -- sklanjamo stari bind ako ga ima
     local old_bind = zauzeti_bindovi[function_name]
     if old_bind then
-        unbindKey(old_bind, "up", hadnler_function)
+        unbindKey(old_bind, "up", handler_function)
     end
 
-    bindKey(dugme, "up", hadnler_function)
+    bindKey(dugme, "up", handler_function)
     zauzeti_bindovi[function_name] = dugme
 end
 
@@ -100,12 +100,12 @@ local function ucitaj_resurs_bindove(resursi_na_cekanju)
             for _, bind_node in ipairs(xmlNodeGetChildren(resource_bind_node)) do
                 local attrs = xmlNodeGetAttributes(bind_node)
 
-                local hadnler_function = exports[getResourceName(resource)][attrs.function_name]
+                local handler_function = exports[getResourceName(resource)][attrs.function_name]
                 
                 if attrs.command then
                     -- sklanjamo ako vec postoji da ne bi bilo zakaceno na vise funkcija
                     removeCommandHandler(attrs.command)
-                    addCommandHandler(attrs.command, hadnler_function)
+                    addCommandHandler(attrs.command, handler_function)
                 end
                 
                 if attrs.key then

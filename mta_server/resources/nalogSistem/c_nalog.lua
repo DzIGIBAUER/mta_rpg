@@ -16,18 +16,18 @@ local gui = {
 
 
 --[[ POLICY ]]
-local policy -- tabela. Od servera dobijemo min_pass_length, maxPassLength, min_user_length, max_user_lenght
+local policy -- tabela. Od servera dobijemo min_pass_length, min_user_length, max_user_lenght
 
 
 --- Animira menjanje teksta u dgs label-u.
 -- @param label dgs label: Label ciji tekst menjamo.
 -- @param novi_text string: novi_tekst.
 local function fade_change_text(label, novi_text)
-    dgsAlphaTo(label, 0, false, "Linear", switch_duration)
+    dgsAlphaTo(label, 0, "Linear", switch_duration)
     if novi_text and novi_text ~= "" then
         setTimer(function()
             dgsSetText(label, novi_text)
-            dgsAlphaTo(label, 1, false, "Linear", switch_duration)
+            dgsAlphaTo(label, 1, "Linear", switch_duration)
         end, switch_duration, 1)
     end
 end
@@ -79,6 +79,8 @@ local function switch_ui()
         r_state = false
     end
     
+    dgsSetText(gui.poruka_label, "")
+
     prikazi_register_ui(r_state)
     prikazi_login_ui(not r_state)
 end
@@ -88,30 +90,30 @@ local function _login()
     dgsSetText(gui.poruka_label, "")
 
     local username = dgsGetText(gui.login.user_edit)
-    local lozinka = dgsGetText(gui.login.pass_label)
+    local lozinka = dgsGetText(gui.login.pass_edit)
 
-    triggerServerEvent("igracSistem:loginPokusaj", resourceRoot, username, lozinka)
+    triggerServerEvent("nalogSistem:loginPokusaj", resourceRoot, username, lozinka)
 end
 
 local function _register()
     dgsSetText(gui.poruka_label, "")
 
     local username = dgsGetText(gui.register.user_edit)
-    local lozinka = dgsGetText(gui.register.pass_label)
+    local lozinka = dgsGetText(gui.register.pass_edit)
     local lozinka_potvrda = dgsGetText(gui.register.pass_confirm_edit)
 
     -- ove provere imamo i na strani servera za slucaj da korisnik pokusa da ih zaobidje ovde
     if #username < policy.min_user_length or #username > policy.max_user_lenght then
         return triggerEvent(
-            "igracSistem:registracijeNeuspesna",
+            "nalogSistem:registracijaNeuspesna",
             localPlayer,
             string.format("Korisničko ime mora da bude duže od %s a kraće od %s karaktera.", policy.min_user_length, policy.max_user_lenght)
         )
     end
 
-    if #lozinka < policy.min_pass_length or #username > policy.maxPassLength then
+    if #lozinka < policy.min_pass_length then
         return triggerEvent(
-            "igracSistem:registracijeNeuspesna",
+            "nalogSistem:registracijaNeuspesna",
             localPlayer,
             string.format("Lozinka mora da bude duža od %s karaktera.", policy.min_pass_length)
         )
@@ -119,13 +121,13 @@ local function _register()
 
     if lozinka ~= lozinka_potvrda then
         return triggerEvent(
-            "igracSistem:registracijeNeuspesna",
+            "nalogSistem:registracijaNeuspesna",
             localPlayer,
             "Lozinke se ne podudaraju."
         )
     end
 
-    triggerServerEvent("igracSistem:registerPokusaj", resourceRoot, username, lozinka)
+    triggerServerEvent("nalogSistem:registerPokusaj", resourceRoot, username, lozinka)
 end
 
 
@@ -134,32 +136,32 @@ local function _login_uspesan()
     gui = nil
     showCursor(false)
 end
-addEvent("igracSistem:loginNeuspesan", true)
-addEventHandler("igracSistem:loginNeuspesan", localPlayer, _login_uspesan)
+addEvent("nalogSistem:loginUspesan", true)
+addEventHandler("nalogSistem:loginUspesan", localPlayer, _login_uspesan)
 
 local function _login_neuspesan(poruka)
     dgsLabelSetColor(gui.poruka_label, 255, 50, 50, 255)
     dgsSetText(gui.poruka_label, poruka)
 end
-addEvent("igracSistem:loginUspesan", true)
-addEventHandler("igracSistem:loginUspesan", localPlayer, _login_neuspesan)
+addEvent("nalogSistem:loginNeuspesan", true)
+addEventHandler("nalogSistem:loginNeuspesan", localPlayer, _login_neuspesan)
 
 
 local function _registracija_uspesna()
     prikazi_login_ui(true)
     prikazi_register_ui(false)
     dgsLabelSetColor(gui.poruka_label, 50, 255, 50, 255)
-    dgsSetText(gui.poruka_label, "Uspesno ste registrovani, sada možete da se ulogujete.")
+    dgsSetText(gui.poruka_label, "Uspešno ste registrovani, sada možete da se ulogujete.")
 end
-addEvent("igracSistem:registracijeUspesna", true)
-addEventHandler("igracSistem:registracijeUspesna", localPlayer, _registracija_uspesna)
+addEvent("nalogSistem:registracijaUspesna", true)
+addEventHandler("nalogSistem:registracijaUspesna", localPlayer, _registracija_uspesna)
 
 local function _registracija_nesupesna(poruka)
     dgsLabelSetColor(gui.poruka_label, 255, 50, 50, 255)
     dgsSetText(gui.poruka_label, poruka)
 end
-addEvent("igracSistem:registracijeNeuspesna", true)
-addEventHandler("igracSistem:registracijeNeuspesna", localPlayer, _registracija_nesupesna)
+addEvent("nalogSistem:registracijaNeuspesna", true)
+addEventHandler("nalogSistem:registracijaNeuspesna", localPlayer, _registracija_nesupesna)
 
 
 local function prikazi_welcome_screen()
@@ -209,8 +211,8 @@ local function prikazi_welcome_screen()
     addEventHandler("onDgsMouseClickUp", gui.register.button, _register, false)
 end
 
-addEvent("igracSistem:clientPolicyInfo", true)
-addEventHandler("igracSistem:clientPolicyInfo", resourceRoot, function(policy_settings)
+addEvent("nalogSistem:clientPolicyInfo", true)
+addEventHandler("nalogSistem:clientPolicyInfo", resourceRoot, function(policy_settings)
     policy = policy_settings
     prikazi_welcome_screen()
 end)

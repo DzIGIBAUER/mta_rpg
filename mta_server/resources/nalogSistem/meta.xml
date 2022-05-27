@@ -3,11 +3,26 @@
     <script src="c_nalog.lua" type="client" />
     <script src="s_nalog.lua" type="server" />
 
+    <script src="s_registracija.lua" type="server" />
+
     <settings>
         <setting name="@nalogSistem.minPassLength" value="4" />
 
         <setting name="@nalogSistem.maxUserLength" value="32" />
         <setting name="@nalogSistem.minUserLength" value="4" />
+
+        <setting name="@nalogSistem.pocetniNovac" value="20000" />
+
+        <setting name="@nalogSistem.pocetniPosX" value="0" />
+        <setting name="@nalogSistem.pocetniPosY" value="0" />
+        <setting name="@nalogSistem.pocetniPosZ" value="3" />
+
+        <setting name="@nalogSistem.pocetniRotX" value="0" />
+        <setting name="@nalogSistem.pocetniRotY" value="0" />
+        <setting name="@nalogSistem.pocetniRotZ" value="0" />
+
+        <setting name="@nalogSistem.pocetniModel" value="0" />
+
     </settings>
 
     <min_mta_version server="1.5.8-9.20957" />
