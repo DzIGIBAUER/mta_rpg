@@ -92,9 +92,18 @@ local function _login()
     local username = dgsGetText(gui.login.user_edit)
     local lozinka = dgsGetText(gui.login.pass_edit)
 
+    if #username == 0 or #lozinka == 0 then
+        return triggerEvent(
+            "nalogSistem:loginNeuspesan",
+            localPlayer,
+            "Polja korisničko ime i lozinka moraju da budu popunjena."
+        )
+    end
+
     triggerServerEvent("nalogSistem:loginPokusaj", resourceRoot, username, lozinka)
 end
 
+-- Handler za register dugme.
 local function _register()
     dgsSetText(gui.poruka_label, "")
 
@@ -132,7 +141,7 @@ end
 
 
 local function _login_uspesan()
-    destroyElement(gui.window)
+    dgsCloseWindow(gui.window)
     gui = nil
     showCursor(false)
 end
@@ -214,5 +223,7 @@ end
 addEvent("nalogSistem:clientPolicyInfo", true)
 addEventHandler("nalogSistem:clientPolicyInfo", resourceRoot, function(policy_settings)
     policy = policy_settings
-    prikazi_welcome_screen()
+    if not getElementData(localPlayer, "id", false) then
+        prikazi_welcome_screen()
+    end
 end)

@@ -39,6 +39,8 @@ services:
       - "3306:3306"
     volumes:
       - ./mysql_server/data:/var/lib/mysql
+      - ./mysql_server/init:/docker-entrypoint-initdb.d
+      
     
     healthcheck:
       test: ["CMD", "mysql --database=${MYSQL_DATABASE} --password=${MYSQL_ROOT_PASSWORD} --port=3306 --execute='SELECT 1;'"]

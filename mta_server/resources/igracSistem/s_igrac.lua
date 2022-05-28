@@ -17,7 +17,7 @@ local function _igrac_diskonektovan(quit_type)
 
     dbExec(
         db,
-        "UPDATE nalog SET novac = ?, pos_x = ?, pos_y = ?, pos_z = ?, rot_x = ?, rot_y = ?, rot_z = ? WHERE id= ?",
+        "UPDATE igrac SET novac = ?, pos_x = ?, pos_y = ?, pos_z = ?, rot_x = ?, rot_y = ?, rot_z = ? WHERE id= ?",
         getPlayerMoney(source), pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, id
     )
 end

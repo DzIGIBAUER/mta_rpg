@@ -12,7 +12,7 @@ pocetni = {
         rot_x = tonumber(get("pocetniRotX")),
         rot_y = tonumber(get("pocetniRotY")),
         rot_z = tonumber(get("pocetniRotZ")),
-    },  
+    },
     novac = tonumber(get("pocetniNovac")),
     model_id = tonumber(get("pocetniModel"))
 }
@@ -45,61 +45,6 @@ function posalji_poruku(client, event, poruka, ...)
     end
     triggerClientEvent(client, event, client, poruka)
 end
-
-
-
---- Provarava da li je igrac uneo tacnu lozinku za datog korisnika.
-local function _procces_login_query(handle, db, client, uneta_lozinka)
-    local result, aff_rows, last_id = dbPoll(handle, 0)
-
-    if handle == false then
-        local err_code, err_msg = aff_rows, last_id
-        return posalji_poruku(
-            client,
-            "nalogSistem:loginNeuspesan",
-            "Došlo je do greške sa bazom podataka."
-        )
-    end
-
-    if next(result) == nil then
-        return posalji_poruku(client, "nalogSistem:loginNeuspesan", "Netačno korisničko ime ili lozinka.")
-    end
-
-    passwordVerify(uneta_lozinka, result[1].lozinka, function(matches)
-        if not matches then
-            return posalji_poruku(client, "nalogSistem:loginNeuspesan", "Netačno korisničko ime ili lozinka.")
-        end
-
-        posalji_poruku(client, "nalogSistem:loginUspesan")
-        result[1].lozinka = nil -- vise nam ne treba
-
-        triggerEvent("igracSistem:igracUlogovan", client, result[1])
-
-        dbExec(db, "UPDATE nalog SET zadnji_login = CURRENT_TIMESTAMP() WHERE id = ?", result[1].nalog_id)
-    end)
-end
-
---- Kada igrac pokusa da se uloguje.
-local function _login_pokusaj(username, uneta_lozinka)
-    local db = exports.dbSistem.get_connection()
-    if not db then
-        return posalji_poruku(client, "nalogSistem:loginNeuspesan", "Nije ostvarena veza sa bazom podataka.")
-    end
-
-    local client = client
-
-    dbQuery(
-        _procces_login_query,
-        {db, client, uneta_lozinka},
-        db,
-        "SELECT * FROM nalog INNER JOIN igrac ON nalog.id = igrac.nalog_id AND nalog.korisnicko_ime = ?", username
-    )
-end
-addEvent("nalogSistem:loginPokusaj", true)
-addEventHandler("nalogSistem:loginPokusaj", resourceRoot, _login_pokusaj)
-
-
-
 
 
 local function _igrac_resurs_pokrenut(pokrenut_resurs)

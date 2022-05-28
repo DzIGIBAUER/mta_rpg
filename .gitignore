@@ -1,6 +1,6 @@
 /mta_server/resources/test/
 
-/mysql_server/
+/mysql_server/data
 
 /mta_server/data/
 !/mta_server/data/mtaserver.conf

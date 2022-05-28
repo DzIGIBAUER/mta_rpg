@@ -4,6 +4,8 @@
     <script src="s_nalog.lua" type="server" />
 
     <script src="s_registracija.lua" type="server" />
+    <script src="s_login.lua" type="server" />
+    
 
     <settings>
         <setting name="@nalogSistem.minPassLength" value="4" />
