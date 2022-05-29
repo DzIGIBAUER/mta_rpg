@@ -9,25 +9,6 @@ local tip_notifikacije = {
     ["uspesno"] = {10, 255, 10}
 }
 
--- https://gist.github.com/marceloCodget/3862929#gistcomment-3729315
-local function rgbToHex(r, g, b)
-    -- EXPLANATION:
-    -- The integer form of RGB is 0xRRGGBB
-    -- Hex for red is 0xRR0000
-    -- Multiply red value by 0x10000(65536) to get 0xRR0000
-    -- Hex for green is 0x00GG00
-    -- Multiply green value by 0x100(256) to get 0x00GG00
-    -- Blue value does not need multiplication.
-
-    -- Final step is to add them together
-    -- (r * 0x10000) + (g * 0x100) + b =
-    -- 0xRR0000 +
-    -- 0x00GG00 +
-    -- 0x0000BB =
-    -- 0xRRGGBB
-    local rgb = (r * 0x10000) + (g * 0x100) + b
-    return string.format("%x", rgb)
-end
 
 --- Animira dgs element kako dolazi na vrh ekrana i vraca se nakon 'vreme_poruke'.
 -- @param element dgs element: Element koji animiramo.
@@ -60,7 +41,7 @@ local function prikazi_notifikaciju(tip, naslov, poruka)
     if #poruka > 80 then return end
     
     local naslovColor = tip_notifikacije[tip] or tip_notifikacije["obavestenje"]
-    naslovColor = rgbToHex(unpack(naslovColor))
+    naslovColor = tocolor(unpack(naslovColor))
 
     local window = dgsCreateWindow(0.35, 0, 0.3, 0.15, naslov, true, naslovColor, nil, nil, nil, nil, nil, nil, true)
     dgsSetProperty(window, "movable", false)

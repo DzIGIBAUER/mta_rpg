@@ -5,6 +5,7 @@
     vozilopreview, gde se nalazi vozilo koje igrac gleda
     camerapos, gde se nalazi kamera igraca dok je u dialogu
     vozilospawn, gde se spawn-uje vozilo nakon sto je kupljeno
+    vozilocolor, gde su atributi color1 color2 i color3
 -->
 
 <map>
@@ -13,5 +14,6 @@
         <vozilopreview posX="90.236" posY="-305.868" posZ="1.578" />
         <camerapos posX="90.987" posY="-282.72" posZ="4.578" />
         <vozilospawn posX="23.842" posY="-269.808" posZ="2.403" rotX="0" rotY="0" rotZ="270.844" />
+        <vozilocolor color1="#FFFFFF" color2="#FFFFFF" color3="#FFFFFF" colorheadlight="#FFFFFF" />
     </salon>
 </map>

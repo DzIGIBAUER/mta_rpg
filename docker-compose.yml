@@ -25,6 +25,7 @@ services:
 
   mysql-server:
     image: mysql
+    command: ["--log_bin_trust_function_creators=1"]
     container_name: mysql_server
     environment:
       - MYSQL_ROOT_PASSWORD

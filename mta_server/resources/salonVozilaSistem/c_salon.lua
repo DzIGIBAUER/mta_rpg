@@ -1,31 +1,25 @@
 loadstring(exports.dgs:dgsImportFunction())()
 
-local salon_vozila = {}
-local trenutno_prikazano_vozilo
 local gui = {}
 
+local saloni_vozila
+local trenutni_salon
 
---- Sklanja/prikazuje kursor i iskljucuje/ukljucuje kontrole igraca.
--- @param[opt] enabled bool: Da li kontrole treba ukljuciti ili iskljuciti.
-local function set_controls_state(enabled)
-    showCursor(not enabled)
-    toggleAllControls(enabled, true, false)
-end
+local TrenutniSalon = {}
+TrenutniSalon.__index = TrenutniSalon
 
+local SMER = {
+    NAZAD = -1,
+    NAPRED = 1
+}
 
---- Salje event serveru da igrac zeli da kupi vozilo.
--- @param salon element: Salon u kom igrac kupuje.
--- @param vozilo_index int: Id vozila u tom salonu.
-local function kupi_vozilo(salon, vozilo_index)
-    triggerServerEvent("salonVozilaSistem:igracKupujeVozilo", localPlayer, salon, vozilo_index)
-end
 
 
 --- Menja boju cene vozila u odnosu na to da li igrac ima vise, manje ili tacno onliko novca koliko je potrebno
 -- za kupovinu trenutno prikazanog vozila.
 -- @param label dgs element: Label kojim je prikazana cena.
 -- @param cena int: cena vozila.
-local function set_cena_label_color(label, cena)
+local function _set_cena_label_color(label, cena)
     if cena == getPlayerMoney() then
         dgsSetProperty(label, "textColor", tocolor(255, 0, 255))
     elseif cena > getPlayerMoney() then
@@ -35,43 +29,139 @@ local function set_cena_label_color(label, cena)
     end
 end
 
+--- Sklanja/prikazuje kursor i iskljucuje/ukljucuje kontrole igraca.
+-- @param[opt] enabled bool: Da li kontrole treba ukljuciti ili iskljuciti.
+local function set_controls_state(enabled)
+    showCursor(not enabled)
+    toggleAllControls(enabled, true, false)
+end
+
+
+
+
+
+
+
+--- Konstruise salon objekat za lakse upravljanje trenutnim salonom.
+-- @param salon element: Salon u kom se nalazimo.
+-- @param info table: Informacije o vozilima ovog salona.
+-- @return table: ovaj objekat.
+function TrenutniSalon.new(salon, info)
+    local self = setmetatable({}, TrenutniSalon)
+    
+    local camera_pos_element = getElementsByType("camerapos", salon)[1]
+    local vozilo_preview_element = getElementsByType("vozilopreview", salon)[1]
+    local vozilo_spawn_element = getElementsByType("vozilospawn", salon)[1]
+    local vozilo_color_element = getElementsByType("vozilocolor", salon)[1]
+
+    do
+        local assert_msg = "Node '%s' nije pronadjen u 'salon' node-u u fajlu 'saloni.map'."
+        assert(camera_pos_element, string.format(assert_msg, "camerapos"))
+        assert(vozilo_preview_element, string.format(assert_msg, "vozilopreview"))
+        assert(vozilo_spawn_element, string.format(assert_msg, "vozilospawn"))
+        assert(vozilo_color_element, string.format(assert_msg, "vozilocolor"))
+    end
+
+    self.camera = {
+        pos = Vector3(getElementPosition(camera_pos_element))
+    }
+
+    self.preview = {
+        pos = Vector3(getElementPosition(vozilo_preview_element)),
+        rot = Vector3(getElementRotation(vozilo_preview_element))
+    }
+
+    self.spawn = {
+        pos = Vector3(getElementPosition(vozilo_spawn_element)),
+        rot = Vector3(getElementRotation(vozilo_spawn_element))
+    }
+
+
+    local color_1 = getElementData(vozilo_color_element, "color1")
+    local color_2 = getElementData(vozilo_color_element, "color2")
+    local color_3 = getElementData(vozilo_color_element, "color3")
+    local color_headlight = getElementData(vozilo_color_element, "colorheadlight")
+
+    self.colors = {
+        { tonumber("0x"..color_1:sub(2,3)), tonumber("0x"..color_1:sub(4,5)), tonumber("0x"..color_1:sub(6,7)) },
+        { tonumber("0x"..color_2:sub(2,3)), tonumber("0x"..color_2:sub(4,5)), tonumber("0x"..color_2:sub(6,7)) },
+        { tonumber("0x"..color_3:sub(2,3)), tonumber("0x"..color_3:sub(4,5)), tonumber("0x"..color_3:sub(6,7)) },
+        { tonumber("0x"..color_headlight:sub(2,3)), tonumber("0x"..color_headlight:sub(4,5)), tonumber("0x"..color_headlight:sub(6,7)) }
+    }
+
+    self.salon_element = salon
+    self.info = info
+    self.trenutno_vozilo_idx = nil
+    self.trenutno_vozilo_elem = nil
+
+    setCameraMatrix(self.camera.pos.x, self.camera.pos.y, self.camera.pos.z, self.preview.pos.x,self.preview.pos.y, self.preview.pos.z)
+    self:prikazi_gui()
+
+    set_controls_state(false)
+    self:promeni_prikaz(SMER.NAPRED)
+
+    return self
+end
+
+--- Stvara vozilo za clienta i brise predhodno.
+-- @param[opt] model_id int: Model vozila ili nil ako samo zelimo da uklonimo trenutno.
+function TrenutniSalon:_prikazi_vozilo(model_id)
+    if isElement(self.trenutno_vozilo_elem) then
+        destroyElement(self.trenutno_vozilo_elem)
+    end
+
+    if not model_id then return end
+
+    self.trenutno_vozilo_elem = createVehicle(
+        model_id, self.preview.pos.x, self.preview.pos.y, self.preview.pos.z,
+        self.preview.rot.x, self.preview.rot.y, self.preview.rot.z
+    )
+
+    setVehicleColor(self.trenutno_vozilo_elem, unpack(self.colors[1]), unpack(self.colors[2]), unpack(self.colors[2]), nil, nil, nil)
+end
+
 --- Menja trenutno prikazano vozilo u salonu.
--- @param salon element: Salon u kom se trenutno igrac nalazi.
 -- @param smer int: Da li prikazujemo sledece vozila veceg ili manjeg id-a. (1 ili -1).
-local function promeni_prikaz(salon, smer)
-    smer = smer or 1
+function TrenutniSalon:promeni_prikaz(smer)
+    smer = smer or SMER.NAPRED
     local novi_idx
 
-    if not trenutno_prikazano_vozilo then
+    if not self.trenutno_vozilo_idx then
         novi_idx = 1
     else
-        novi_idx = trenutno_prikazano_vozilo + smer
+        novi_idx = self.trenutno_vozilo_idx + smer
     end
 
-    local v_info = salon_vozila[salon][novi_idx]
+    local v_info = self.info[novi_idx]
 
     if not v_info then
-        if smer == 1 then
+        if smer == SMER.NAPRED then
             novi_idx = 1
         else
-            novi_idx = #salon_vozila[salon]
+            novi_idx = #self.info
         end
         
-        v_info = salon_vozila[salon][novi_idx]
+        v_info = self.info[novi_idx]
     end
 
-    trenutno_prikazano_vozilo = novi_idx
+    self.trenutno_vozilo_idx = novi_idx
 
     dgsSetText(gui.vozilo_label, getVehicleNameFromModel(v_info.m_id))
     dgsSetText(gui.cena_label, v_info.cena)
-    set_cena_label_color(gui.cena_label, v_info.cena)
+    self:_prikazi_vozilo(v_info.m_id)
+    _set_cena_label_color(gui.cena_label, v_info.cena)
+end
+
+
+--- Salje event serveru da igrac zeli da kupi vozilo.
+function TrenutniSalon:kupi_vozilo()
+    triggerServerEvent("salonVozilaSistem:igracKupujeVozilo", localPlayer, self.salon_element, self.trenutno_vozilo_idx, self.colors)
 end
 
 
 --- Prikazuje GUI salona vozila.
--- @param salon element: Salon ciji GUI prikazujemo.
 -- TODO: titleHeight sjebava sve.
-local function prikazi_gui_salona(salon)
+function TrenutniSalon:prikazi_gui()
     gui.window = dgsCreateWindow(0.20, 0.80, 0.60, 0.20, "Salon", true)
     dgsSetProperty(gui.window, "color", tocolor(0, 0, 0, 0))
 
@@ -97,9 +187,9 @@ local function prikazi_gui_salona(salon)
 
     addEventHandler("onDgsWindowClose", gui.window,
         function()
+            self:_prikazi_vozilo(nil)
             setCameraTarget(localPlayer)
             set_controls_state(true)
-            trenutno_prikazano_vozilo = nil
         end    
     )
 
@@ -108,72 +198,50 @@ local function prikazi_gui_salona(salon)
             if button ~= "left" then return end 
 
             if source == gui.btn_left then
-                promeni_prikaz(salon, -1)
+                self:promeni_prikaz(SMER.NAZAD)
             elseif source == gui.btn_right then
-                promeni_prikaz(salon, 1)
+                self:promeni_prikaz(SMER.NAPRED)
             elseif source == gui.btn_buy then
-                kupi_vozilo(salon, trenutno_prikazano_vozilo)
+                self:kupi_vozilo()
             end
 
         end
     )
-
 end
 
 
---- Uzima informacije salona u ciji smo marker usli.
+
 local function _marker_hit(hit_player, matching_dimension)
     if hit_player ~= localPlayer or not matching_dimension or getPedOccupiedVehicle(localPlayer) then return end
 
     local salon = getElementParent(source)
 
-    local camera_pos_element = getElementsByType("camerapos", salon)[1]
-    local vozilo_preview_element = getElementsByType("vozilopreview", salon)[1]
-    local vozilo_spawn_element = getElementsByType("vozilospawn", salon)[1]
-
-    do
-        local assert_msg = "Node '%s' nije pronadjen u 'salon' node-u u fajlu 'saloni.map'."
-        assert(camera_pos_element, string.format(assert_msg, "camerapos"))
-        assert(vozilo_preview_element, string.format(assert_msg, "vozilopreview"))
-        assert(vozilo_spawn_element, string.format(assert_msg, "vozilospawn"))
-    end
-    
-    
-    local camera_pos = {
-        x = getElementData(camera_pos_element, "posX", false),
-        y = getElementData(camera_pos_element, "posY", false),
-        z = getElementData(camera_pos_element, "posZ", false)
-    }
-
-    local look_at = {
-        x = getElementData(vozilo_preview_element, "posX", false),
-        y = getElementData(vozilo_preview_element, "posY", false),
-        z = getElementData(vozilo_preview_element, "posZ", false)
-    }
-
-    setCameraMatrix(camera_pos.x, camera_pos.y, camera_pos.z, look_at.x, look_at.y, look_at.z)
-
-    set_controls_state(false)
-    prikazi_gui_salona(salon)
-
-    promeni_prikaz(salon)
-
+    trenutni_salon = TrenutniSalon.new(salon, saloni_vozila[salon])
 end
 addEventHandler("onClientMarkerHit", resourceRoot, _marker_hit)
+
+local function _marker_leave(left_player, matching_dimension)
+    if left_player ~= localPlayer or not matching_dimension or getPedOccupiedVehicle(localPlayer) then return end
+
+    trenutni_salon = nil
+end
+addEventHandler("onClientMarkerLeave", resourceRoot, _marker_leave)
+
+    
+
 
 
 
 local function _server_poslao_saloni_info(veh_info)
-    salon_vozila = veh_info
+    saloni_vozila = veh_info
 end
 addEvent("salonVozilaSistem:serverPoslaoSalonInfo", true)
 addEventHandler("salonVozilaSistem:serverPoslaoSalonInfo", resourceRoot, _server_poslao_saloni_info)
 
-
 addEventHandler("onPlayerMoneyChange", root,
     function()
         if isElement(gui.window) then
-            set_cena_label_color(gui.cena_label)
+            _set_cena_label_color(gui.cena_label)
         end
     end
 )

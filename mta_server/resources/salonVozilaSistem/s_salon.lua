@@ -8,9 +8,9 @@ local vozila_salona = {}
 -- Triggeruje-se kada igrac zeli da kupi vozilo sa id-em vozilo_index u salonu.
 -- @param salon element: Salon gde igrac kupuje.
 -- @param vozilo_index int: Id vozila u salonu.
-local function _igrac_kupuje_vozilo(salon, vozilo_index)
+-- @param colors talbe: U kojim boajma ce vozilo biti.
+local function _igrac_kupuje_vozilo(salon, vozilo_index, colors)
     if not client or source ~= client then return end
-
 
     local v_info = vozila_salona[salon][vozilo_index]
     if not v_info then
@@ -29,7 +29,12 @@ local function _igrac_kupuje_vozilo(salon, vozilo_index)
         )
     end
 
-    exports.voziloSistem:dodaj_vozilo_u_db(client, v_info.m_id, v_info.cena)
+    local vozilo_spawn_element = getElementsByType("vozilospawn")[1]
+    local x, y, z = getElementPosition( vozilo_spawn_element )
+    --local rx, ry, rz = getElementRotation( vozilo_spawn_element ) -- nece nesto
+    local rx, ry, rz = getElementData(vozilo_spawn_element, "rotX"), getElementData(vozilo_spawn_element, "rotY"), getElementData(vozilo_spawn_element, "rotZ")
+
+    exports.voziloSistem:dodaj_vozilo_u_db(client, v_info.m_id, x, y, z, rx, ry, rz, colors, v_info.cena)
 end
 addEvent("salonVozilaSistem:igracKupujeVozilo", true)
 addEventHandler("salonVozilaSistem:igracKupujeVozilo", root, _igrac_kupuje_vozilo)
