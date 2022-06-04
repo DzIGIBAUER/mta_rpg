@@ -92,9 +92,10 @@ local function ucitaj_resurs_bindove(resursi_na_cekanju)
 
     local binds_node = xmlFindChild(root_node, "binds", 0)
     for _, _resource_root in ipairs(resursi_na_cekanju) do
-        local resource = getResourceFromName(getElementID(_resource_root)) 
+        local resource = getResourceFromName(getElementID(_resource_root))
 
         local resource_bind_node = xmlFindChild(binds_node, getResourceName(resource), 0)
+        
         -- ako resurs ima key bind-ove
         if resource_bind_node then
             for _, bind_node in ipairs(xmlNodeGetChildren(resource_bind_node)) do

@@ -60,6 +60,7 @@ local function osvezi_postavke(file_data, target_node)
 
         comparator_mngr:compare_and_fix(user_target_node, server_user_target_node, true, true)
 
+        xmlSaveFile(user_xml_root)
         xmlUnloadFile(user_target_node)
 
         xmlUnloadFile(server_user_target_node)

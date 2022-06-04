@@ -1,7 +1,15 @@
 <meta>
 
-    <script src="s_vozilo.lua" />
+    <script src="gui/c_kontrolna_tabla.lua" type="client" />
+    <script src="gui/c_vozilo_data.lua" type="client" />
+    <script src="gui/c_vozila_menadzer.lua" type="client" />
+
+    <script src= "gorivo/s_gorivo.lua" type="server" />
+
+    <script src="s_vozilo.lua" type="server" />
 
     <export function="dodaj_vozilo_u_db" type="server" />
+    <export function="namesti_gorivo" type="server" />
+    <export function="toggle_gui" type="client" />
 
 </meta>

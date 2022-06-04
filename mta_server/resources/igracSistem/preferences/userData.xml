@@ -1,3 +1,7 @@
 <root>
-    <binds></binds>
+    <binds>
+        <voziloSistem>
+            <bind function_name="toggle_gui" command="vozila_menadzer" key="F5" />
+        </voziloSistem>
+    </binds>
 </root>

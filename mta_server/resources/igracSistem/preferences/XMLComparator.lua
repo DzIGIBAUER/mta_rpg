@@ -37,6 +37,7 @@ function Comparator:compare_and_fix(user_node, server_node, izbrisi_nepotrebne, 
                 self:copy(n, user_node, true)
             end
         end
+
     end
 
     if izbrisi_nepotrebne then
