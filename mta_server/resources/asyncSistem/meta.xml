@@ -1,0 +1,6 @@
+<meta>
+    <script src="async.lua" type="server" />
+    <script src="async_deliver.lua" type="shared" />
+    
+    <export function="load_async" type="shared" />
+</meta>
