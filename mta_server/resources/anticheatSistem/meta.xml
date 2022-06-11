@@ -1,0 +1,5 @@
+<meta>
+    <script src="anticheat_deliver.lua" type="server" />
+
+    <export function="init" type="server" />
+</meta>
