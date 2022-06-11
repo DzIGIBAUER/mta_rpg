@@ -3,11 +3,15 @@
 -- tu dodati <bind> koji mora da sadrzi atribute: 'command' i/ili 'key' i 'function_name'.
 -- Takodje u meta.xml resursa moramo exportovati funkciju za koju je zakacen bind
 
-loadstring(exports.actionBufferSistem:send_function_buffer_construct())()
+loadstring(exports.actionBufferSistem.init())()
+
+local imports = {
+    Buffer = Buffer
+}
 
 FILE_PATH = "preferences/userData.xml"
 
-local buffer_mngr = Buffer.new(200, "resource")
+local buffer_mngr = imports.Buffer.new(200, "resource")
 
 
 --- kljuc: ime funkcije, vrednost: dugme za koje je funkcija zakacena

@@ -1,4 +1,7 @@
 
+--- Proverava da li svi argumenti imaju odredjeni tip, u suprotnom dize error.
+-- @param args table: Tabelda gde je kljuc promenljiva, a vrednost tip podatka
+-- kojeg promenljiva mora da bude.
 function validate_event(args)
     for var, zeljeni_tip in pairs(args) do
         local tip = (isElement(var) and getElementType(var)) or type(var)

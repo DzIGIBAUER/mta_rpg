@@ -5,7 +5,7 @@ local timer = nil
 
 local next = next
 
---- Salje sve evente koji su se skupili za 'vreme_cekanja' i skanja ih iz 'event_buffer'
+--- Salje sve evente koji su se skupili za 'vreme_cekanja' i sklanja ih iz 'event_buffer'
 local function pokreni_slanje()
     triggerServerEvent("eventBuffer:eventsReceived", resourceRoot, event_buffer)
 

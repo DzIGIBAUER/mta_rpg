@@ -10,7 +10,7 @@ local VOZILO_ITEM_DATA_COLUMN = 1
 local gui = {}
 
 
-
+--- Menja trenutnu vidljivost prozora.
 function toggle_gui()
     local new_state = not dgsGetVisible(gui.window)
     
@@ -20,7 +20,7 @@ function toggle_gui()
     showCursor(new_state, true)
 end
 
-
+--- Stvara gui.
 local function init_gui()
     gui.window = dgsCreateWindow(0.3, 0.3, 0.35, 0.35, "Menadžer vozila", true)
 
@@ -57,9 +57,7 @@ addEventHandler("onClientResourceStart", resourceRoot, _resurs_pokrenut)
 
 
 
-
-
-
+--- Kada su vozila igraca ucitana sacuvacemo ih lokalno kako bi ih prikazalu u gui-u.
 local function _vozila_igraca_ucitana(vozila)
     for i, v in ipairs(vozila) do
         dgsGridListAddRow(gui.grid_list, i, v.id, getVehicleNameFromModel(v.model_id), "NE")

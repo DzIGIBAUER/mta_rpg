@@ -2,7 +2,8 @@ loadstring(exports.dgs:dgsImportFunction())()
 
 local gui = {}
 
-
+--- Prikazuje informacije vozila.
+-- @param data table: Informacije vozila.
 function set_vozilo_data(data)
     if dgsGetText ~= tostring(data.id) then
         dgsSetText(gui.vozilo_id, data.id)
@@ -11,6 +12,8 @@ function set_vozilo_data(data)
     end
 end
 
+--- Prikazuje/sakriva zaseban prozor sa informacijama vozila.
+-- @param[opt] prikazi bool: Da li da prikazemo prozor. Default je true.
 function prikazi_vozilo_data(prikazi)
     prikazi = (prikazi ~= false) and true
 
@@ -19,7 +22,7 @@ function prikazi_vozilo_data(prikazi)
 
 end
 
-
+--- Stvara gui.
 function init_gui()
     gui.window = dgsCreateWindow(0.35, 0.35, 0.3, 0.3, "", true)
 

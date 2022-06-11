@@ -1,6 +1,10 @@
-loadstring(exports.actionBufferSistem.send_function_buffer_construct())()
+loadstring(exports.actionBufferSistem.init())()
 
-local func_buff_mngr = Buffer.new(200, "player")
+local imports = {
+    Buffer = Buffer
+}
+
+local func_buff_mngr = imports.Buffer.new(200, "player")
 
 local vozila_salona = {}
 

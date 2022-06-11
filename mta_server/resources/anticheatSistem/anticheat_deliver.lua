@@ -7,7 +7,7 @@ function init()
     local data = {}
 
     for i, fp in ipairs(FILE_PATHS) do
-        local file = fileExists(fp) and fileOpen(fp) or error("Fatalna greska. Nije pronadjen fajl ".. fp)
+        local file = fileExists(fp) and fileOpen(fp) or error("Fatalna greška. Nije pronadjen fajl ".. fp)
 
         data[i] = fileRead(file, fileGetSize(file))
 

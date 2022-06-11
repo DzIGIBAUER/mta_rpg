@@ -2,11 +2,14 @@ local _active = {}
 
 local _async_element_root = createElement("AsyncRoot")
 
+
 --- [[ INVOKE ]]
+--- Nastavlja coroutine kada se dbQuery zavrsi.
 local function _dbQuery_callback(handle, co_ref)
     coroutine.resume(deref(co_ref), handle)
 end
 
+--- Poziva dbQuery i argumentima dodaje callback i callback agumente.
 local function _dbQuery_invoke(_async_obj, co, func, args)
     table.insert(args, 1, _dbQuery_callback)
     table.insert(args, 2, {ref(co)})
@@ -14,12 +17,14 @@ local function _dbQuery_invoke(_async_obj, co, func, args)
 end
 
 
+--- Trigger-uje event sa argumentima kojima dodaje async objekat na kraj.
 local function _triggerEvent_invoke(async_obj, _co, func, args)
     args[#args+1] = async_obj
 
     func(unpack(args))
 end
 
+--- Lista funkcija koje su podrzane u await pozivu i njihova implementacija.
 local _invoke = {
     [dbQuery] = _dbQuery_invoke,
     [triggerEvent] = _triggerEvent_invoke,
@@ -32,6 +37,8 @@ local _invoke = {
 --- [[ AWAIT ]]
 local _await = {}
 
+--- Stvara async element i poziva async implementaciju funkcije koja je prosledjena.
+-- @param args table: Tabela ciji je prvi argument funkcija.
 function _await:__call(args)
     local co = coroutine.running()
     assert(co, "Await može biti pozvan samo unutar async funkcije.")
@@ -59,6 +66,8 @@ local await = setmetatable({}, _await)
 --- [[ ASYNC ]]
 local _async = {}
 
+--- Stvara coroutine u kojem poziva prosledjenu funkciju unutar wrapper funkciju.
+-- @param args table: Tabela ciji je prvi argument funkcija.
 function _async:__call(args)
     local func = args[1]
     assert(type(func) == "function", "Async nije dobio funkciju kao prvi argument.")
@@ -86,6 +95,9 @@ local async = setmetatable({}, _async)
 ------------------
 
 --- [[ RESOLVE ]]
+--- Salje event na async_element sa argumentima koji ce biti return vrednosti await pozivu.
+-- @param async_element Element: Async Element.
+-- @param[opt] ... any: Argumenti koji ce biti prosledjeni.
 local function _resolve(async_element, ...)
     assert(isElement(async_element) and getElementType(async_element) == "Async", "Očekivan Async element kao prvi argument resolve funkcije.")
 
@@ -111,6 +123,9 @@ local function _resolve(async_element, ...)
 
 end
 
+--- Handler za event koji je okinut kada je pozvana resolve funkcija.
+-- Trazi coroutine koji je povezan za async_element i nastavlja ga.
+-- @param[opt] ... any: Argumenti prosledjeni resolve funkcjiji.
 local function _call_resolved(...)
     for co, async_element in pairs(_active) do
         if async_element == source then
@@ -123,6 +138,8 @@ addEventHandler("AsyncSistem:resolved", _async_element_root, _call_resolved)
 ------------------
 
 --- [[ AEH WRAPPER ]]
+--- Wrapper funkcjija za addEventHandler. Argumenti ostaju isti, a u handler funkciji ce biti dostapna resolve funkcjija
+-- ako je zadnji argument async_element. U suprotnom ponasa se kao obican event handler.
 local _addEventHandler = addEventHandler
 local function addEventHandler(event_name, attached_to, function_handler, get_propagated, priority)
     local function _wrapper_function(...)

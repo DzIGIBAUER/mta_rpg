@@ -7,17 +7,17 @@
 
 <meta>
 
-    <script src="functionBuffer/functionBufferClass.lua" type="shared" />
-    <script src="functionBuffer/bufferDeliver.lua" type="shared" />
+    <script src="functionBuffer/function_buffer_class.lua" type="shared" />
+    <script src="functionBuffer/buffer_deliver.lua" type="shared" />
 
-    <export function="send_function_buffer_construct" type="shared" />
+    <export function="init" type="shared" />
 
-    <script src="eventBuffer/s_eventBuffer.lua" type="server" />
-    <script src="eventBuffer/c_eventBuffer.lua" type="client" />
-    <script src="eventBuffer/eventBuffer.lua" type="shared" />
+    <script src="eventBuffer/s_event_buffer.lua" type="server" />
+    <script src="eventBuffer/c_event_buffer.lua" type="client" />
+    <script src="eventBuffer/event_buffer.lua" type="shared" />
 
-    <export function="posaljiEventServeru" type="client" />
-    <export function="posaljiEventClientu" type="server" />
+    <export function="posalji_event_serveru" type="client" />
+    <export function="posalji_event_clientu" type="server" />
 
     <download_priority_group>20</download_priority_group>
 

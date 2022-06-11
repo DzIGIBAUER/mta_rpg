@@ -6,7 +6,9 @@ local POTROSNJA = (5.5 / 100) / 1000 --- l/m
 -- key: vozilo element, value {gorivo=int, zadnja_provera=float}
 local vozila = {}
 
-
+--- Pamti kolicinu goriva vozila.
+-- @param vozilo Vehicle: Vozilo cije gorivo namestamo.
+-- @param kolicina int: Kolicana goriva vozila.
 function namesti_gorivo(vozilo, kolicina)
     vozila[vozilo] = {
         gorivo = kolicina,
@@ -14,7 +16,8 @@ function namesti_gorivo(vozilo, kolicina)
     }
 end
 
-
+--- Recuna gorivo vozila na osnuvu vremena zadjne provere i trenutne brzine.
+-- @param vozilo Vehicle: Vozilo cije gorivo racunamo. Mora da bude dodato u tabelu.
 local function izracunaj_potroseno_gorivo(vozilo)
     local vozilo_info = vozila[vozilo]
     if not vozilo_info then
@@ -37,7 +40,8 @@ local function izracunaj_potroseno_gorivo(vozilo)
     return trenutna_brzina * proteklo_vreme * POTROSNJA
 end
 
-
+--- Pokrece proveru goriva vozila.
+-- @param max_provera int: Maksimalan broj vozila koje mozemo da proverimo. Dodato kako ne bi kocilo server.
 local function pokreni_proveru(max_provera)
     local odradjenih_provera = 0
 
@@ -68,7 +72,7 @@ local function pokreni_proveru(max_provera)
     end
 end
 
-
+-- Kreira/nastavlja coroutine za proveru goriva vozila.
 local function main()
 
     local pokreni_proveru_co
