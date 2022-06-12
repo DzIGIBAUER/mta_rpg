@@ -22,11 +22,12 @@ local function init_gui()
 
     dgsSetProperty({gui.vozilo_ime, gui.brzina, gui.gorivo}, "textSize", {1.5, 1.5})
 
+    dgsSetVisible(gui.window, false)
 
     addEventHandler("onDgsPreRender", gui.window,
         function()
             if dgsGetVisible(gui.window) then
-                dgsSetText(selgui.brzina, get_element_speed(trenutno_vozilo))
+                dgsSetText(gui.brzina, get_element_speed(trenutno_vozilo))
             end
         end
     )
@@ -70,7 +71,7 @@ local function azuriraj_gorivo(nova_kolicina)
     dgsSetText(gui.gorivo, nova_kolicina)
 end
 addEvent("voziloSistem:gorivoKolicinaPromenjena", true)
-addEventHandler("voziloSistem:gorivoKolicinaPromenjena", root, _azuriraj_gorivo)
+addEventHandler("voziloSistem:gorivoKolicinaPromenjena", root, azuriraj_gorivo)
 
 --- Racuna brzinu vozila u km/h.
 -- @param the_element Element: Element ciju brzinu zelimo.

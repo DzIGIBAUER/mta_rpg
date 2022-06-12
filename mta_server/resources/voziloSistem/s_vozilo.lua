@@ -98,7 +98,7 @@ function spawn_vozilo(id)
 
     for i, v in ipairs(vozila_igraca) do
         if v.id == id then
-            local vozilo = createVehicle(v.model_id, 0, 0, -500, 0, 0, 0, v.registarska_tablica)
+            local vozilo = createVehicle(v.model_id, 0, 0, -500, 0, 0, 0)
             
             setVehicleColor(
                 vozilo,

@@ -1,0 +1,14 @@
+<!--
+    banka je node gde su definisane informacije banke.
+    relation je node koji opisuje vezu ulaznog i izlaznog markera. Samo prva 2 markera u ovom node-u su uzimaju u obzir.
+        Za vise relacija dodati vise relation node-ova.
+-->
+
+<map>
+    <banka>
+        <relation>
+            <marker posX="1459.4775390625" posY="-1010.17578125" posZ="25.84375" type="cylinder" interior="0"/>
+            <marker posX="374.6708" posY="173.8050" posZ="1007.3893" type="cylinder" interior="3"/>
+        </relation>
+    </banka>
+</map>

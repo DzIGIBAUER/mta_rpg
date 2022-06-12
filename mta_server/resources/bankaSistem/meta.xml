@@ -1,0 +1,5 @@
+<meta>
+    <script src="s_banka.lua" type="server" />
+
+    <map src="banka.map" />
+</meta>

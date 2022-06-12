@@ -2,5 +2,5 @@
     <script src="s_anticheat_deliver.lua" type="server" />
     <export function="init" type="server" />
 
-    <script src="s_antispam.lua" type="server" />
+    <script src="spam/s_antispam.lua" type="server" />
 </meta>
