@@ -7,7 +7,7 @@
 <map>
     <banka>
         <relation>
-            <marker posX="1459.4775390625" posY="-1010.17578125" posZ="25.84375" type="cylinder" interior="0"/>
+            <marker posX="1459.4775390625" posY="-1010.17578125" posZ="26" type="cylinder" interior="0"/>
             <marker posX="374.6708" posY="173.8050" posZ="1007.3893" type="cylinder" interior="3"/>
         </relation>
     </banka>

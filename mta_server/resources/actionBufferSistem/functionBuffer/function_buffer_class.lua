@@ -27,7 +27,7 @@ end
 -- 'false' ako elemnti nisu procesuirani i 'table' ako treba izbrisati samo neke elmente, odredjen u toj tabeli.
 function Buffer:run_function()
     if not self:is_handler_set() then
-        return error("Handler funkcija nije podesena. " + getResourceName(resource))
+        return error("Handler funkcija nije podesena. ".. getResourceName(resource))
     end
 
     self.last_timer = nil

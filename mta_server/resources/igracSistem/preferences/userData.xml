@@ -4,7 +4,7 @@
             <bind function_name="toggle_gui" command="vozila_menadzer" key="F5" />
         </voziloSistem>
         <igracSistem>
-            <bind function_name="interact" command="interact" key="F" />
+            <bind function_name="interact" command="interact" key="F" type="server" />
         </igracSistem>
     </binds>
 </root>

@@ -19,7 +19,7 @@ local zauzeti_bindovi = {}
 
 --- Povezuje 'dugme' sa exportovanom funkcijom sa imenom 'function_name' iz resursa 'resource'
 -- i sklanja stari, ako postoji.
--- Ne mozemo da koristimo samu funkciju kao argument zato sto funkcija mozda dolazi iz drugig Lua VM
+-- Ne mozemo da koristimo samu funkciju kao argument zato sto funkcija mozda dolazi iz drugog Lua VM
 -- pa umesto funkcije dobijemo 'nil', vec imamo ime i pristupimo 'exports' tabeli sa tim imenom.
 -- @param resource element: Resurs gde se nalazi exportovana funkcija.
 -- @param dugme string: Dugme sa kojim se povezuje exportovana funkcija.
@@ -105,17 +105,22 @@ local function ucitaj_resurs_bindove(resursi_na_cekanju)
             for _, bind_node in ipairs(xmlNodeGetChildren(resource_bind_node)) do
                 local attrs = xmlNodeGetAttributes(bind_node)
 
-                local handler_function = exports[getResourceName(resource)][attrs.function_name]
-                
-                if attrs.command then
-                    -- sklanjamo ako vec postoji da ne bi bilo zakaceno na vise funkcija
-                    removeCommandHandler(attrs.command)
-                    addCommandHandler(attrs.command, handler_function)
+                if attrs.type ~= "server" then
+                    local handler_function = exports[getResourceName(resource)][attrs.function_name]
+
+                    if attrs.command then
+                        -- sklanjamo ako vec postoji da ne bi bilo zakaceno na vise funkcija
+                        removeCommandHandler(attrs.command)
+                        addCommandHandler(attrs.command, handler_function)
+                    end
+                    
+                    if attrs.key then
+                        namesti_novi_resurs_bind(resource, attrs.key, attrs.function_name)
+                    end
+                else
+                    triggerServerEvent("igracSistem:namestiBind", resourceRoot, getResourceName(resource), attrs)
                 end
-                
-                if attrs.key then
-                    namesti_novi_resurs_bind(resource, attrs.key, attrs.function_name)
-                end
+
             end
         end
     end

@@ -19,29 +19,25 @@ local function get_corresponding_marker(marker)
 end
 
 
-local function _igrac_interact(u_vozilu)
+local function _igrac_interact(marker, u_vozilu)
     if u_vozilu then return end
 
     imports.validate_event{
-        [client] = "player"
+        [source] = "player"
     }
 
-    if not isElementWithinMarker(client, source) then
-        return
-    end
-
-    local corresponding_marker = get_corresponding_marker(source)
+    local corresponding_marker = get_corresponding_marker(marker)
     if not corresponding_marker then
-        outputDebugString(("Nije pronađen odgovarajući marker za marker %s."):format(source))
+        outputDebugString(("Nije pronađen odgovarajući marker za marker %s."):format(marker))
         return
     end
 
     local interior = getElementInterior(corresponding_marker)
     local x, y, z = getElementPosition(corresponding_marker)
-    setElementInterior(client, interior, x, y, z)
+    setElementInterior(source, interior, x, y, z)
 end
-addEvent("igracSistem:interact", true)
-addEventHandler("igracSistem:interact", resourceRoot, _igrac_interact)
+addEvent("igracSistem:interact")
+addEventHandler("igracSistem:interact", root, _igrac_interact)
 
 
 local function _resurs_pokrenut()

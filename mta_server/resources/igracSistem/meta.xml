@@ -1,17 +1,22 @@
 <meta>
 
     <script src="preferences/XMLComparator.lua" type="client" />
+
     <script src="c_notifikacija.lua" type="client" />
-    <script src="c_interact.lua" type="client" />
+
+    <script src="s_interact.lua" type="server" />
+    <export function="interact" type="server" />
 
     <script src="preferences/userBinds/c_binds.lua" type="client"/>
+    <export function="azuriraj_bind" type="client" />
+
+    <script src="preferences/userBinds/s_binds.lua" type="server"/>
+
     <script src="preferences/userBinds/c_obnovi.lua" type="client"/>
+
     <script src="preferences/userBinds/s_obnovi.lua" type="server"/>
 
     <script src="s_igrac.lua" type="server" />
-
-    <export function="azuriraj_bind" type="client" />
-    <export function="interact" type="client" />
 
     <settings>
         <setting name="@spawnX" value="0" />

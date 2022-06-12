@@ -24,7 +24,7 @@ function obnovi_user_preferences(args)
     callback_args = args.callback_arguments
 
     if not standardne_postavke then
-        triggerServerEvent("userBinds:clientTraziStandardnePostavke", resourceRoot, args.target_node)
+        triggerServerEvent("igracSistem:clientTraziStandardnePostavke", resourceRoot, args.target_node)
     else
         osvezi_postavke(standardne_postavke, args.target_node)
     end
@@ -89,5 +89,5 @@ local function osvezi_postavke(file_data, target_node)
     end
 
 end
-addEvent("userBinds:serverPosaloStandardnePostavke", true)
-addEventHandler("userBinds:serverPosaloStandardnePostavke", resourceRoot, osvezi_postavke)
+addEvent("igracSistem:serverPosaloStandardnePostavke", true)
+addEventHandler("igracSistem:serverPosaloStandardnePostavke", resourceRoot, osvezi_postavke)

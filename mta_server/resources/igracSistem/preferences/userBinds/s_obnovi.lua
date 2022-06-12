@@ -35,8 +35,8 @@ local function _posalji_xml_string(...)
         )
     end
     
-   triggerClientEvent(client, "userBinds:serverPosaloStandardnePostavke", resourceRoot, file_data, unpack({...}) )
+   triggerClientEvent(client, "igracSistem:serverPosaloStandardnePostavke", resourceRoot, file_data, unpack({...}) )
 
 end
-addEvent("userBinds:clientTraziStandardnePostavke", true)
-addEventHandler("userBinds:clientTraziStandardnePostavke", resourceRoot, _posalji_xml_string)
+addEvent("igracSistem:clientTraziStandardnePostavke", true)
+addEventHandler("igracSistem:clientTraziStandardnePostavke", resourceRoot, _posalji_xml_string)
